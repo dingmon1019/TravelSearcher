@@ -153,15 +153,16 @@ export function PriceGraph() {
                                     dataKey="date"
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fontSize: isDesktop ? 13 : 11, fontWeight: 700, fill: '#64748b' }}
+                                    tick={{ fontSize: isDesktop ? 13 : 10, fontWeight: 700, fill: '#64748b' }}
                                     tickFormatter={(val) => {
-                                        const d = new Date(val);
                                         const parts = val.split('-');
+                                        if (!isDesktop) return `${parts[1]}/${parts[2]}`; // 모바일에서는 요일 생략
+                                        const d = new Date(val);
                                         const dayStr = dayNames[d.getDay()];
                                         return `${parts[1]}/${parts[2]}(${dayStr})`;
                                     }}
                                     dy={5}
-                                    interval={0}
+                                    interval={isDesktop ? 0 : "preserveStartEnd"}
                                 />
                                 <Tooltip
                                     content={<CustomTooltip />}
