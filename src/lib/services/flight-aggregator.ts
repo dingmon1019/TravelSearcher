@@ -8,28 +8,40 @@ import { AmadeusAdapter } from '@/lib/adapters/amadeus'
  * 여러 제공업체로부터 결과를 수집하고 병합
  */
 export class FlightAggregator {
-    private adapters: FlightProviderAdapter[]
+    private adapters: FlightProviderAdapter[] = []
+    private initialized = false
 
     constructor(adapters?: FlightProviderAdapter[]) {
         if (adapters) {
             this.adapters = adapters
-        } else {
-            this.adapters = []
-
-            // 환경 변수가 있으면 Amadeus 추가
-            if (process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET) {
-                this.adapters.push(new AmadeusAdapter())
-            }
-
-            // 항상 Mock은 포함 (개발/테스트 단계이므로 결과가 없을 때 대비)
-            this.adapters.push(new MockFlightAdapter())
+            this.initialized = true
         }
+    }
+
+    private ensureAdapters() {
+        if (this.initialized) return
+
+        console.log(`[Aggregator] Configuring adapters. Env AMADEUS_CLIENT_ID: ${!!process.env.AMADEUS_CLIENT_ID}`)
+
+        // 환경 변수가 있으면 Amadeus 추가
+        if (process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET) {
+            console.log('[Aggregator] Adding AmadeusAdapter')
+            this.adapters.push(new AmadeusAdapter())
+        } else {
+            console.warn('[Aggregator] Amadeus credentials missing, skipping AmadeusAdapter')
+        }
+
+        // 항상 Mock은 포함
+        this.adapters.push(new MockFlightAdapter())
+        this.initialized = true
     }
 
     /**
      * 모든 제공업체에서 병렬로 검색
      */
     async searchAll(params: SearchParams): Promise<FlightOffer[]> {
+        this.ensureAdapters()
+        console.log(`[Aggregator] Searching with: ${this.adapters.map(a => a.name).join(', ')}`)
         // Promise.allSettled로 일부 실패해도 계속 진행
         const results = await Promise.allSettled(
             this.adapters.map(adapter =>
