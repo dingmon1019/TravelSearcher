@@ -23,31 +23,14 @@ export async function GET(request: NextRequest) {
             })
         }
 
-        // 2. Supabase에서 조회
-        const dbTrends = await getPriceTrends(route, 150)
-
-        // 3. DB에 데이터가 있으면 반환
-        if (dbTrends.length > 0) {
-            const formattedTrends: DayPriceTrend[] = dbTrends.map(trend => ({
-                date: trend.date,
-                price: trend.price,
-                isWeekend: trend.is_weekend || false,
-            }))
-
-            // 캐시 저장 (1시간)
-            await setCache(cacheKey, formattedTrends, 3600)
-
-            return NextResponse.json({
-                success: true,
-                data: formattedTrends,
-                meta: { cached: false, source: 'database' }
-            })
-        }
-
-        // 4. DB에 데이터가 없으면 Mock 데이터 생성
-        const mockTrends: DayPriceTrend[] = []
+        // 2. 기점 데이터 생성 (오늘 기준 전후 150일 확보)
+        const trends: DayPriceTrend[] = []
         const startDate = new Date()
         startDate.setMonth(startDate.getMonth() - 2)
+
+        // DB 데이터 조회
+        const dbTrends = await getPriceTrends(route, 300) // 넉넉하게 조회
+        const dbMap = new Map(dbTrends.map(t => [t.date, t.price]))
 
         for (let i = 0; i < 150; i++) {
             const date = new Date(startDate)
@@ -57,24 +40,34 @@ export async function GET(request: NextRequest) {
             const day = date.getDay()
             const isWeekend = day === 0 || day === 6
 
-            const basePrice = 180000
-            const fluctuation = Math.sin(i / 10) * 50000 + (Math.random() * 30000)
-            const price = basePrice + fluctuation + (isWeekend ? 40000 : 0)
+            // DB에 실제 데이터가 있으면 그것을 사용, 없으면 Mock 생성
+            let price: number
+            if (dbMap.has(dateStr)) {
+                price = dbMap.get(dateStr)!
+            } else {
+                const basePrice = 180000
+                const fluctuation = Math.sin(i / 10) * 50000 + (Math.random() * 30000)
+                price = Math.floor((basePrice + fluctuation + (isWeekend ? 40000 : 0)) / 100) * 100
+            }
 
-            mockTrends.push({
+            trends.push({
                 date: dateStr,
-                price: Math.floor(price / 100) * 100,
+                price,
                 isWeekend
             })
         }
 
-        // Mock 데이터 캐시 (1시간)
-        await setCache(cacheKey, mockTrends, 3600)
+        // 캐시 저장 (1시간)
+        await setCache(cacheKey, trends, 3600)
 
         return NextResponse.json({
             success: true,
-            data: mockTrends,
-            meta: { cached: false, source: 'mock' }
+            data: trends,
+            meta: {
+                cached: false,
+                realDataCount: dbMap.size,
+                totalCount: trends.length
+            }
         })
     } catch (error) {
         console.error('Price trends error:', error)
