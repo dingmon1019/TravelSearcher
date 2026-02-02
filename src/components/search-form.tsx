@@ -163,7 +163,7 @@ export function SearchForm() {
     const handleSearch = () => {
         // Validation
         if (selectedDepartures.length === 0) {
-            toast.error("출발지를 선택해주세.", { description: "출발지는 필수 입력 한목입니다." })
+            toast.error("출발지를 선택해주세요.", { description: "출발지는 필수 입력 항목입니다." })
             return
         }
 
