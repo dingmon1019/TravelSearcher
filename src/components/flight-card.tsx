@@ -40,9 +40,9 @@ function FlightLeg({
 
     return (
         <div className="flex-1 w-full flex items-center gap-6 sm:gap-8">
-            <div className="flex flex-col text-center min-w-[70px]">
-                <span className="font-extrabold text-xl sm:text-2xl text-slate-900 tracking-tight">{departureTime}</span>
-                <span className="text-xs font-bold text-slate-400">{originCode}</span>
+            <div className="flex flex-col text-center min-w-[60px] md:min-w-[70px]">
+                <span className="font-black text-lg md:text-2xl text-slate-900 tracking-tighter md:tracking-tight">{departureTime}</span>
+                <span className="text-[10px] md:text-xs font-bold text-slate-400">{originCode}</span>
             </div>
 
             <div className="flex-1 flex flex-col items-center gap-1">
@@ -56,16 +56,16 @@ function FlightLeg({
                     <div className="h-[2px] flex-1 bg-slate-100 rounded-full"></div>
                 </div>
                 <span className={cn(
-                    "text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap",
+                    "text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full font-bold whitespace-nowrap",
                     isDirect ? "text-slate-400 bg-slate-50" : stopCount === 1 ? "text-amber-700 bg-amber-50" : "text-rose-700 bg-rose-50 border border-rose-100"
                 )}>
                     {isDirect ? "직항" : `경유 ${stopCount}회`}
                 </span>
             </div>
 
-            <div className="flex flex-col text-center min-w-[70px]">
-                <span className="font-extrabold text-xl sm:text-2xl text-slate-900 tracking-tight">{arrivalTime}</span>
-                <span className="text-xs font-bold text-slate-400">{destinationCode}</span>
+            <div className="flex flex-col text-center min-w-[60px] md:min-w-[70px]">
+                <span className="font-black text-lg md:text-2xl text-slate-900 tracking-tighter md:tracking-tight">{arrivalTime}</span>
+                <span className="text-[10px] md:text-xs font-bold text-slate-400">{destinationCode}</span>
             </div>
 
             <div className="hidden md:block w-[1px] h-10 bg-slate-100 mx-1"></div>
@@ -102,10 +102,10 @@ export function FlightCard({
                     <div className="flex-1 p-5">
                         {returnInfo ? (
                             // 왕복: 가는편과 오는편을 좌우로 배치
-                            <div className="flex flex-col md:flex-row gap-6">
+                            <div className="flex flex-col md:flex-row gap-4 md:gap-6">
                                 {/* 가는편 */}
                                 <div className="flex-1 relative">
-                                    <span className="inline-block mb-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded-md font-bold shadow-sm">
+                                    <span className="inline-block mb-1.5 text-[9px] md:text-[10px] bg-blue-600 text-white px-1.5 md:px-2 py-0.5 md:py-1 rounded-md font-bold shadow-sm">
                                         가는편
                                     </span>
                                     <FlightLeg
@@ -122,12 +122,12 @@ export function FlightCard({
                                 </div>
 
                                 {/* 구분선 */}
-                                <div className="hidden md:block w-[1px] bg-slate-200 self-stretch"></div>
-                                <div className="md:hidden h-[1px] bg-slate-200 w-full"></div>
+                                <div className="hidden md:block w-[1px] bg-slate-100 self-stretch"></div>
+                                <div className="md:hidden h-[1px] bg-slate-50 w-full my-1"></div>
 
                                 {/* 오는편 */}
                                 <div className="flex-1 relative">
-                                    <span className="inline-block mb-2 text-[10px] bg-slate-600 text-white px-2 py-1 rounded-md font-bold shadow-sm">
+                                    <span className="inline-block mb-1.5 text-[9px] md:text-[10px] bg-slate-600 text-white px-1.5 md:px-2 py-0.5 md:py-1 rounded-md font-bold shadow-sm">
                                         오는편
                                     </span>
                                     <FlightLeg {...returnInfo} />
@@ -150,17 +150,17 @@ export function FlightCard({
                     </div>
 
                     {/* Price & Action Section */}
-                    <div className="bg-slate-50/50 p-5 lg:min-w-[200px] flex lg:flex-col items-center justify-between lg:justify-center gap-4 lg:border-l border-slate-100">
-                        <div className="lg:text-center">
-                            <span className="block text-2xl font-black text-blue-600 tracking-tighter">
+                    <div className="bg-slate-50/50 p-4 md:p-5 lg:min-w-[180px] flex lg:flex-col items-center justify-between lg:justify-center gap-3 lg:gap-4 lg:border-l border-slate-100">
+                        <div className="lg:text-center text-left">
+                            <span className="block text-xl md:text-2xl font-black text-blue-600 tracking-tighter leading-none">
                                 {price}원
                             </span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                 {returnInfo ? "왕복 총액" : "편도 총액"}
                             </span>
                         </div>
 
-                        <Button className="bg-slate-900 hover:bg-blue-600 text-white font-bold px-8 h-12 rounded-xl transition-all shadow-sm">
+                        <Button className="bg-slate-900 hover:bg-blue-600 text-white font-bold px-6 md:px-8 h-10 md:h-12 rounded-xl transition-all shadow-sm">
                             선택
                         </Button>
                     </div>

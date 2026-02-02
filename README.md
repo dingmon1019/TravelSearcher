@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TravelSearcher
 
-## Getting Started
+무료 항공권 검색 서비스 - Vercel + Supabase + Upstash
 
-First, run the development server:
+## 🚀 Features
+
+- ✈️ 항공권 검색 (편도/왕복)
+- 📊 150일 가격 추이 그래프
+- 💰 최저가 하이라이트
+- ⚡ Redis 캐싱으로 빠른 응답
+- 🌍 글로벌 CDN 배포
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 16, React, TailwindCSS
+- **Backend**: Next.js API Routes (Serverless)
+- **Database**: Supabase (PostgreSQL)
+- **Cache**: Upstash Redis
+- **Deployment**: Vercel
+
+## 💰 Cost
+
+**$0/month** - 완전 무료!
+
+- Vercel: Free tier
+- Supabase: 500MB free
+- Upstash: 10K requests/day free
+
+## 🏃 Quick Start
+
+### 1. Clone repository
+
+```bash
+git clone https://github.com/dingmon1019/TravelSearcher.git
+cd TravelSearcher/web
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Set up environment variables
+
+Create `.env.local`:
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Upstash Redis
+UPSTASH_REDIS_REST_URL=your_redis_url
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
+```
+
+### 4. Set up Supabase database
+
+Run the SQL in `supabase_schema.sql` in your Supabase SQL Editor.
+
+### 5. Run development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📦 Deploy to Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/dingmon1019/TravelSearcher)
 
-## Learn More
+1. Click the button above
+2. Add environment variables
+3. Deploy!
 
-To learn more about Next.js, take a look at the following resources:
+## 🏗️ Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+┌─────────────────┐
+│   Next.js App   │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+┌───▼──┐  ┌──▼───┐
+│Redis │  │Supa- │
+│Cache │  │base  │
+└──────┘  └──────┘
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📝 License
 
-## Deploy on Vercel
+MIT
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🤝 Contributing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Contributions welcome!
+
+## 📧 Contact
+
+For questions, open an issue.

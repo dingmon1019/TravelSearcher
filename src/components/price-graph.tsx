@@ -9,15 +9,16 @@ import { useSearchParams } from "next/navigation"
 import { DayPriceTrend } from "@/lib/types/flight"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
         return (
-            <div className="bg-slate-900 border-none rounded-xl shadow-2xl p-4 text-white">
-                <p className="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">
+            <div className="bg-slate-900 border-none rounded-xl shadow-2xl p-2 md:p-4 text-white">
+                <p className="text-[8px] md:text-[10px] font-bold text-slate-400 mb-0.5 md:mb-1 uppercase tracking-widest">
                     {payload[0].payload.date}
                 </p>
-                <p className="text-xl font-black tracking-tighter">
+                <p className="text-sm md:text-xl font-black tracking-tighter">
                     {payload[0].value.toLocaleString()}원
                 </p>
             </div>
@@ -27,6 +28,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 }
 
 export function PriceGraph() {
+    const isDesktop = useMediaQuery("(min-width: 768px)")
     const searchParams = useSearchParams()
     const [data, setData] = useState<DayPriceTrend[]>([])
     const [startIndex, setStartIndex] = useState(0)
@@ -84,8 +86,8 @@ export function PriceGraph() {
     )
 
     return (
-        <Card className="border-none shadow-sm bg-white rounded-3xl overflow-hidden mb-8">
-            <CardHeader className="flex flex-row items-center gap-6 pb-2 px-6 pt-6">
+        <Card className="border-none shadow-sm bg-white rounded-2xl md:rounded-3xl overflow-hidden mb-6 md:mb-8">
+            <CardHeader className="flex flex-row items-center gap-4 md:gap-6 pb-2 px-4 md:px-6 pt-4 md:pt-6">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-50 rounded-lg">
                         <TrendingDown className="h-5 w-5 text-blue-600" />
@@ -116,7 +118,7 @@ export function PriceGraph() {
                     </Button>
                 </div>
             </CardHeader>
-            <CardContent className="h-[220px] p-0 relative overflow-hidden flex">
+            <CardContent className="h-[180px] md:h-[220px] p-0 relative overflow-hidden flex">
                 {/* Fixed Y-Axis */}
                 <div className="w-[55px] h-full z-20 bg-white border-r border-slate-50">
                     <ResponsiveContainer width="100%" height="100%">
@@ -124,9 +126,8 @@ export function PriceGraph() {
                             <YAxis
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 12, fontWeight: 700, fill: '#94a3b8' }}
-                                tickFormatter={(val) => `${Math.floor(val / 10000)}만`}
-                                width={45}
+                                tick={{ fontSize: isDesktop ? 12 : 10, fontWeight: 700, fill: '#94a3b8' }}
+                                tickFormatter={(val) => `${Math.floor(val / 10000)}`}
                                 domain={[0, maxPrice * 1.2]}
                             />
                         </BarChart>
@@ -152,14 +153,14 @@ export function PriceGraph() {
                                     dataKey="date"
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fontSize: 13, fontWeight: 700, fill: '#64748b' }}
+                                    tick={{ fontSize: isDesktop ? 13 : 11, fontWeight: 700, fill: '#64748b' }}
                                     tickFormatter={(val) => {
                                         const d = new Date(val);
                                         const parts = val.split('-');
                                         const dayStr = dayNames[d.getDay()];
-                                        return `${parts[1]}/${parts[2]} (${dayStr})`;
+                                        return `${parts[1]}/${parts[2]}(${dayStr})`;
                                     }}
-                                    dy={10}
+                                    dy={5}
                                     interval={0}
                                 />
                                 <Tooltip
