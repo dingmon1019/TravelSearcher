@@ -28,6 +28,7 @@ import {
     DrawerTrigger,
 } from "@/components/ui/drawer"
 import { Filter } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 function SearchResults() {
     const isDesktop = useMediaQuery("(min-width: 768px)")
@@ -35,9 +36,24 @@ function SearchResults() {
     const [loading, setLoading] = useState(true)
     const [results, setResults] = useState<FlightOffer[]>([])
     const [sort, setSort] = useState("price")
+    const [currentPage, setCurrentPage] = useState(1)
+    const pageSize = 20
 
     const from = searchParams.get("from") || ""
     const to = searchParams.get("to") || ""
+    const adults = parseInt(searchParams.get("adults") || "1")
+    const children = parseInt(searchParams.get("children") || "0")
+    const infants = parseInt(searchParams.get("infants") || "0")
+    const seatClass = searchParams.get("seatClass") || "economy"
+    const depDate = searchParams.get("dep") || ""
+    const retDate = searchParams.get("ret") || ""
+
+    const seatClassMap: Record<string, string> = {
+        economy: "일반석",
+        premium: "프리미엄 일반석",
+        business: "비즈니스",
+        first: "일등석"
+    }
 
     useEffect(() => {
         const fetchFlights = async () => {
@@ -57,8 +73,12 @@ function SearchResults() {
 
         if (searchParams) {
             fetchFlights()
+            setCurrentPage(1) // 검색 파라미터나 정렬 변경 시 1페이지로 리셋
         }
     }, [searchParams, sort])
+
+    const totalPages = Math.ceil(results.length / pageSize)
+    const paginatedResults = results.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
     return (
         <div className="space-y-8">
@@ -66,24 +86,64 @@ function SearchResults() {
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-6 md:py-10 bg-gradient-to-b from-blue-50/50 to-white border-b border-slate-100 mb-2 md:mb-4">
                 <div className="max-w-7xl mx-auto">
                     {isDesktop ? (
-                        <SearchForm />
-                    ) : (
-                        <div className="flex flex-col gap-4">
-                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                        <div className="space-y-6">
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-wrap items-center gap-x-12 gap-y-4">
                                 <div className="flex flex-col">
-                                    <span className="text-xs font-bold text-slate-400 uppercase">여정</span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">인원 및 좌석</span>
+                                    <span className="text-lg font-black text-slate-900">
+                                        성인 {adults}{children > 0 && `, 소아 ${children}`}{infants > 0 && `, 유아 ${infants}`} · {seatClassMap[seatClass] || seatClass}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">일정</span>
+                                    <span className="text-lg font-black text-slate-900">
+                                        {depDate}{retDate && ` ~ ${retDate}`}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">여정</span>
                                     <span className="text-lg font-black text-slate-900">{from} → {to}</span>
                                 </div>
-                                <Drawer>
-                                    <DrawerTrigger asChild>
-                                        <Button variant="outline" size="sm" className="rounded-xl font-bold">변경</Button>
-                                    </DrawerTrigger>
-                                    <DrawerContent className="h-[90vh]">
-                                        <div className="overflow-y-auto p-4">
-                                            <SearchForm />
-                                        </div>
-                                    </DrawerContent>
-                                </Drawer>
+                                <div className="ml-auto flex items-center gap-3">
+                                    <Drawer>
+                                        <DrawerTrigger asChild>
+                                            <Button variant="outline" className="rounded-2xl font-bold px-6 h-12 border-slate-200 hover:bg-slate-50">검색 수정</Button>
+                                        </DrawerTrigger>
+                                        <DrawerContent className="h-[90vh]">
+                                            <div className="max-w-4xl mx-auto w-full overflow-y-auto p-10">
+                                                <DrawerHeader>
+                                                    <DrawerTitle className="text-2xl font-black mb-6">검색 필터 수정</DrawerTitle>
+                                                </DrawerHeader>
+                                                <SearchForm />
+                                            </div>
+                                        </DrawerContent>
+                                    </Drawer>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-4">
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-lg font-black text-slate-900">{from} → {to}</span>
+                                    <Drawer>
+                                        <DrawerTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="rounded-xl font-bold text-blue-600">수정</Button>
+                                        </DrawerTrigger>
+                                        <DrawerContent className="h-[90vh]">
+                                            <div className="overflow-y-auto p-4">
+                                                <SearchForm />
+                                            </div>
+                                        </DrawerContent>
+                                    </Drawer>
+                                </div>
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-bold text-slate-500">
+                                    <span>{depDate}{retDate && ` ~ ${retDate}`}</span>
+                                    <span className="w-[1px] h-3 bg-slate-200 self-center"></span>
+                                    <span>인원 {adults + children + infants}명</span>
+                                    <span className="w-[1px] h-3 bg-slate-200 self-center"></span>
+                                    <span>{seatClassMap[seatClass] || seatClass}</span>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -158,14 +218,62 @@ function SearchResults() {
                             ))}
                         </div>
                     ) : (
-                        <div className="space-y-3 md:space-y-4">
-                            {results.map((flight) => (
-                                <FlightCard
-                                    key={flight.id}
-                                    {...flight}
-                                    price={flight.price.toLocaleString()}
-                                />
-                            ))}
+                        <div className="space-y-6">
+                            <div className="space-y-3 md:space-y-4">
+                                {paginatedResults.map((flight, idx) => (
+                                    <FlightCard
+                                        key={flight.id}
+                                        {...flight}
+                                        price={flight.price.toLocaleString()}
+                                        index={(currentPage - 1) * pageSize + idx}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-2 pt-6">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage(prev => prev - 1)}
+                                        className="rounded-xl font-bold"
+                                    >
+                                        이전
+                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            // TODO: 5페이지 이상일 때 슬라이딩 윈도우 구현 가능
+                                            const pageNum = i + 1;
+                                            return (
+                                                <Button
+                                                    key={pageNum}
+                                                    variant={currentPage === pageNum ? "default" : "ghost"}
+                                                    size="sm"
+                                                    onClick={() => setCurrentPage(pageNum)}
+                                                    className={cn(
+                                                        "w-10 h-10 rounded-xl font-bold",
+                                                        currentPage === pageNum ? "bg-blue-600 hover:bg-blue-700" : ""
+                                                    )}
+                                                >
+                                                    {pageNum}
+                                                </Button>
+                                            )
+                                        })}
+                                        {totalPages > 5 && <span className="text-slate-400 mx-1">...</span>}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage(prev => prev + 1)}
+                                        className="rounded-xl font-bold"
+                                    >
+                                        다음
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

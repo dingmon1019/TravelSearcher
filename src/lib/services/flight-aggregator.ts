@@ -1,6 +1,7 @@
 import { SearchParams, FlightOffer } from '@/lib/types/flight'
 import { FlightProviderAdapter } from '@/lib/adapters/base'
 import { MockFlightAdapter } from '@/lib/adapters/mock'
+import { AmadeusAdapter } from '@/lib/adapters/amadeus'
 
 /**
  * 항공권 검색 집계 서비스
@@ -10,8 +11,19 @@ export class FlightAggregator {
     private adapters: FlightProviderAdapter[]
 
     constructor(adapters?: FlightProviderAdapter[]) {
-        // 기본값: Mock 어댑터만 사용
-        this.adapters = adapters || [new MockFlightAdapter()]
+        if (adapters) {
+            this.adapters = adapters
+        } else {
+            this.adapters = []
+
+            // 환경 변수가 있으면 Amadeus 추가
+            if (process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET) {
+                this.adapters.push(new AmadeusAdapter())
+            }
+
+            // 항상 Mock은 포함 (개발/테스트 단계이므로 결과가 없을 때 대비)
+            this.adapters.push(new MockFlightAdapter())
+        }
     }
 
     /**

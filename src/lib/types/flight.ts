@@ -8,7 +8,7 @@ export interface LocationOption {
     keywords?: string[]; // For search enhancement
 }
 
-export type ProviderType = 'Trip.com' | 'Naver' | 'Skyscanner' | 'Mock';
+export type ProviderType = 'Trip.com' | 'Naver' | 'Skyscanner' | 'Mock' | 'Amadeus';
 
 export interface FlightOffer {
     id: string;
@@ -48,6 +48,7 @@ export interface SearchParams {
     tripType?: 'oneway' | 'round';
     depDate?: string;
     retDate?: string;
+    adults: number;
     sort?: 'price' | 'duration' | 'departure';
 }
 

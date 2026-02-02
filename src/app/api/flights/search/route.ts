@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCached, setCache, createCacheKey } from '@/lib/cache/redis'
 import { flightAggregator } from '@/lib/services/flight-aggregator'
-import { SearchParams } from '@/lib/types/flight'
+import { SearchParams, FlightOffer } from '@/lib/types/flight'
+import { savePriceTrend } from '@/lib/db/supabase'
 
 export async function GET(request: NextRequest) {
     try {
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
             tripType: (searchParams.get('tripType') as 'oneway' | 'round') || 'round',
             depDate: searchParams.get('dep') || '',
             retDate: searchParams.get('ret') || undefined,
+            adults: parseInt(searchParams.get('adults') || '1'),
             sort: (searchParams.get('sort') as 'price' | 'duration' | 'departure') || 'price',
         }
 
@@ -41,17 +43,39 @@ export async function GET(request: NextRequest) {
         // 3. 캐시 저장 (5분)
         await setCache(cacheKey, results, 300)
 
+        // 4. 비동기 백그라운드 데이터 저장 (통계용) - 응답을 기다리지 않음
+        if (results.length > 0) {
+            const lowest = results[0]
+            const route = `${params.from[0]}-${params.to[0]}`
+
+            // Fire and forget
+            Promise.resolve().then(async () => {
+                try {
+                    await savePriceTrend({
+                        route,
+                        date: params.depDate || '',
+                        price: lowest.price,
+                        provider: lowest.provider,
+                        is_weekend: [0, 6].includes(new Date(params.depDate || '').getDay())
+                    })
+                    console.log(`[Background] Saved price trend for ${route}`)
+                } catch (e) {
+                    console.error('[Background] Failed to save price trend:', e)
+                }
+            })
+        }
+
         return NextResponse.json({
             success: true,
             data: results,
             meta: {
                 cached: false,
                 totalResults: results.length,
-                providers: ['Mock'],
                 searchTime,
             }
         });
     } catch (error) {
+        console.error('Search API Error:', error)
         return NextResponse.json({ success: false, error: 'Search failed' }, { status: 500 });
     }
 }

@@ -25,6 +25,9 @@ interface FlightCardProps {
         departureDate: string
         stopCount: number
     }
+    index?: number
+    deepLink?: string
+    provider?: string
 }
 
 function FlightLeg({
@@ -93,9 +96,27 @@ export function FlightCard({
     stopCount,
     departureDate,
     returnInfo,
+    index,
+    deepLink,
+    provider,
 }: FlightCardProps) {
+    const handleSelect = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (deepLink) {
+            window.open(deepLink, '_blank', 'noopener,noreferrer')
+        }
+    }
+
     return (
-        <Card className="hover:border-blue-500 transition-all cursor-pointer group shadow-sm hover:shadow-md rounded-2xl overflow-hidden border-slate-100">
+        <Card
+            className="hover:border-blue-500 transition-all cursor-pointer group shadow-sm hover:shadow-md rounded-2xl overflow-hidden border-slate-100 relative"
+            onClick={handleSelect}
+        >
+            {index !== undefined && (
+                <div className="absolute top-0 left-0 bg-slate-900 text-white text-[10px] font-black px-2 py-1 rounded-br-lg z-10 shadow-sm">
+                    {index + 1}
+                </div>
+            )}
             <CardContent className="p-0">
                 <div className="flex flex-col lg:flex-row">
                     {/* Flight Info Section - 병렬 배치 */}
@@ -158,9 +179,22 @@ export function FlightCard({
                             <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                 {returnInfo ? "왕복 총액" : "편도 총액"}
                             </span>
+                            {provider && (
+                                <div className="mt-1">
+                                    <span className={cn(
+                                        "text-[8px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-tight",
+                                        provider === 'Amadeus' ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"
+                                    )}>
+                                        via {provider}
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
-                        <Button className="bg-slate-900 hover:bg-blue-600 text-white font-bold px-6 md:px-8 h-10 md:h-12 rounded-xl transition-all shadow-sm">
+                        <Button
+                            className="bg-slate-900 hover:bg-blue-600 text-white font-bold px-6 md:px-8 h-10 md:h-12 rounded-xl transition-all shadow-sm"
+                            onClick={handleSelect}
+                        >
                             선택
                         </Button>
                     </div>
