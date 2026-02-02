@@ -1,4 +1,5 @@
 import { LocationOption } from '../types/flight';
+import { AmadeusService } from './amadeus-service';
 
 const ALL_LOCATIONS: LocationOption[] = [
     // --- Groups (Regions/Themes) ---
@@ -49,15 +50,76 @@ const ALL_LOCATIONS: LocationOption[] = [
 ];
 
 export class LocationService {
+    static async getAll(): Promise<LocationOption[]> {
+        return ALL_LOCATIONS;
+    }
+
+    static async getDepartures(): Promise<LocationOption[]> {
+        // 기본값: 대한민국 내 도시들
+        return ALL_LOCATIONS.filter(loc =>
+            loc.type === 'city' && (loc.sub === '대한민국' || loc.id.startsWith('region-kr'))
+        );
+    }
+
+    static async getDestinations(): Promise<LocationOption[]> {
+        // 기본값: 그룹(지역/테마) + 해외 주요 도시
+        return ALL_LOCATIONS.filter(loc =>
+            loc.type === 'group' || (loc.type === 'city' && loc.sub !== '대한민국')
+        );
+    }
+
     static async search(query: string): Promise<LocationOption[]> {
-        if (!query) return ALL_LOCATIONS;
+        if (!query) return this.getAll();
 
         const lowerQuery = query.toLowerCase();
-        return ALL_LOCATIONS.filter(loc =>
+
+        // 1. 내부 정적 데이터 검색
+        const localResults = ALL_LOCATIONS.filter(loc =>
             loc.label.toLowerCase().includes(lowerQuery) ||
             loc.sub.toLowerCase().includes(lowerQuery) ||
             loc.keywords?.some(k => k.toLowerCase().includes(lowerQuery))
         );
+
+        // 2. 검색어가 2글자 이상이면 Amadeus API 연동
+        if (query.length >= 2) {
+            try {
+                const token = await AmadeusService.getAccessToken();
+                const response = await fetch(
+                    `https://test.api.amadeus.com/v1/reference-data/locations?subType=CITY,AIRPORT&keyword=${encodeURIComponent(query)}&max=5`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data) {
+                        const amadeusResults: LocationOption[] = data.data.map((item: any) => ({
+                            id: `city-${item.iataCode.toLowerCase()}`,
+                            type: 'city',
+                            label: `${item.name} (${item.iataCode})`,
+                            sub: `${item.address.countryName}${item.address.cityName ? `, ${item.address.cityName}` : ''}`,
+                            keywords: [item.name, item.iataCode, item.address.cityName, item.address.countryName]
+                        }));
+
+                        // 기존 결과와 합치고 중복 제거 (IATA 코드 기준)
+                        const combined = [...localResults];
+                        for (const am of amadeusResults) {
+                            if (!combined.some(c => c.id === am.id)) {
+                                combined.push(am);
+                            }
+                        }
+                        return combined;
+                    }
+                }
+            } catch (error) {
+                console.error('[LocationService] Amadeus Search Error:', error);
+            }
+        }
+
+        return localResults;
     }
 
     static async getByIds(ids: string[]): Promise<LocationOption[]> {

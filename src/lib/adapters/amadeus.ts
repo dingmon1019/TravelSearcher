@@ -1,5 +1,6 @@
 import { BaseFlightAdapter } from './base'
 import { SearchParams, FlightOffer } from '@/lib/types/flight'
+import { AmadeusService } from '../services/amadeus-service'
 
 /**
  * Amadeus API 어댑터
@@ -7,35 +8,6 @@ import { SearchParams, FlightOffer } from '@/lib/types/flight'
 export class AmadeusAdapter extends BaseFlightAdapter {
     name = 'Amadeus'
     private baseUrl = 'https://test.api.amadeus.com/v2' // 테스트 환경, 실 운영시 https://api.amadeus.com/v2
-    private token: string | null = null
-    private tokenExpiresAt: number = 0
-
-    /**
-     * OAuth2 토큰 획득
-     */
-    private async getAccessToken(): Promise<string> {
-        if (this.token && Date.now() < this.tokenExpiresAt) {
-            return this.token
-        }
-
-        const clientId = process.env.AMADEUS_CLIENT_ID
-        const clientSecret = process.env.AMADEUS_CLIENT_SECRET
-
-        if (!clientId || !clientSecret) {
-            throw new Error('Amadeus API credentials missing')
-        }
-
-        const response = await fetch('https://test.api.amadeus.com/v1/security/oauth2/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`
-        })
-
-        const data = await response.json()
-        this.token = data.access_token
-        this.tokenExpiresAt = Date.now() + (data.expires_in - 60) * 1000 // 1분 전 만료 처리
-        return this.token!
-    }
 
     async search(params: SearchParams): Promise<FlightOffer[]> {
         return this.safeExecute(async () => {
@@ -49,7 +21,7 @@ export class AmadeusAdapter extends BaseFlightAdapter {
                 return []
             }
 
-            const token = await this.getAccessToken()
+            const token = await AmadeusService.getAccessToken()
             console.log(`[Amadeus] Token acquired. Requesting flight offers for ${fromCode} -> ${toCode}`)
 
             // 파라미터 구성

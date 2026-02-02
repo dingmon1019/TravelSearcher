@@ -109,45 +109,76 @@ export function SearchForm() {
     }, [])
 
     // Unified Data Source
-    const [locationOptions, setLocationOptions] = React.useState<LocationOption[]>([])
+    const [departures, setDepartures] = React.useState<LocationOption[]>([])
+    const [destinations, setDestinations] = React.useState<LocationOption[]>([])
+    const [searchQuery, setSearchQuery] = React.useState("")
+    const [searchResults, setSearchResults] = React.useState<LocationOption[]>([])
+    const [isLoading, setIsLoading] = React.useState(false)
 
+    // 초기 데이터 로드 (출발지/도착지 기본 목록)
     React.useEffect(() => {
-        const fetchLocations = async () => {
+        const fetchDefaults = async () => {
             try {
-                const res = await fetch('/api/locations')
-                const data = await res.json()
-                if (data.success) {
-                    const anywhere = { id: 'anywhere', label: '어디든지 상관없음 📍', sub: '전 세계 최저가 검색', type: 'group' as const }
-                    setLocationOptions([anywhere, ...data.data])
-                }
+                const [depRes, destRes] = await Promise.all([
+                    fetch('/api/locations?type=departure'),
+                    fetch('/api/locations?type=destination')
+                ])
+                const depData = await depRes.json()
+                const destData = await destRes.json()
+                if (depData.success) setDepartures(depData.data)
+                if (destData.success) setDestinations(destData.data)
             } catch (err) {
-                console.error("Failed to load locations", err)
+                console.error("Failed to load default locations", err)
             }
         }
-        fetchLocations()
+        fetchDefaults()
     }, [])
+
+    // 실시간 검색 로직 (Debounce 적용 가능하지만 여기선 단순 구현)
+    React.useEffect(() => {
+        if (!searchQuery || searchQuery.length < 1) {
+            setSearchResults([])
+            return
+        }
+
+        const delayDebounceFn = setTimeout(async () => {
+            setIsLoading(true)
+            try {
+                const res = await fetch(`/api/locations?q=${encodeURIComponent(searchQuery)}`)
+                const data = await res.json()
+                if (data.success) setSearchResults(data.data)
+            } catch (err) {
+                console.error("Search failed", err)
+            } finally {
+                setIsLoading(false)
+            }
+        }, 300)
+
+        return () => clearTimeout(delayDebounceFn)
+    }, [searchQuery])
 
     const toggleDeparture = (id: string) => {
         setSelectedDepartures([id])
         setIsDepartureOpen(false)
+        setSearchQuery("")
     }
 
-    const toggleDestination = (id: string) => {
+    const toggleDestination = (id: string, label?: string) => {
         setSelectedDestinations(prev => {
-            // 1. 이미 선택된 경우 제거 (토글 오프)
-            if (prev.includes(id)) {
-                return prev.filter(x => x !== id)
-            }
-
-            // 2. '어디든지' 선택 시 기존 모두 제거하고 'anywhere'만 설정
+            if (prev.includes(id)) return prev.filter(x => x !== id)
             if (id === 'anywhere') {
                 setIsDestinationOpen(false)
                 return ['anywhere']
             }
-
-            // 3. 일반 목적지 선택 시 '어디든지' 제거
             return [...prev.filter(x => x !== 'anywhere'), id]
         })
+
+        // 검색 결과에서 선택한 경우 검색어 초기화 및 닫기
+        if (searchQuery) {
+            setSearchQuery("")
+            // 단일 선택 모드 느낌이면 닫아줌
+            if (isDesktop) setIsDestinationOpen(false)
+        }
     }
 
     const swapLocations = () => {
@@ -547,7 +578,8 @@ export function SearchForm() {
                                         {selectedDepartures.length > 0 ? (
                                             <div className="flex items-center">
                                                 <span className="text-xl md:text-2xl font-black text-slate-900 truncate">
-                                                    {locationOptions.find(o => o.id === selectedDepartures[0])?.label.split(' ')[0]}
+                                                    {(departures.find(o => o.id === selectedDepartures[0]) ||
+                                                        searchResults.find(o => o.id === selectedDepartures[0]))?.label.split(' ')[0]}
                                                 </span>
                                                 <div
                                                     role="button"
@@ -567,33 +599,42 @@ export function SearchForm() {
                                 </button>
                             </PopoverTrigger>
                             <PopoverContent className="p-0 w-screen sm:w-[400px] h-[50vh] sm:h-auto shadow-2xl rounded-t-3xl sm:rounded-3xl overflow-hidden border-slate-100" align="start">
-                                <Command className="h-full">
-                                    <CommandInput placeholder="출발 예정 도시/공항 검색..." className="h-14 text-base border-none ring-0" />
+                                <Command className="h-full" shouldFilter={false}>
+                                    <CommandInput
+                                        placeholder="출발 도시/공항 검색..."
+                                        className="h-14 text-base border-none ring-0"
+                                        value={searchQuery}
+                                        onValueChange={setSearchQuery}
+                                    />
                                     <CommandList className="max-h-none sm:max-h-[350px]">
-                                        <CommandEmpty>검색 결과가 없습니다.</CommandEmpty>
-                                        <CommandGroup heading="인기 공항/지역">
-                                            {locationOptions.filter(o => o.id !== 'anywhere' && o.type === 'group').map(option => (
-                                                <CommandItem key={option.id} onSelect={() => toggleDeparture(option.id)} className="cursor-pointer h-14 text-base">
-                                                    <div className="w-6 mr-2 flex justify-center">
-                                                        <MapPin className={cn("w-4 h-4", selectedDepartures.includes(option.id) ? "text-blue-600" : "text-slate-300")} />
-                                                    </div>
-                                                    <span className="font-black text-slate-800 mr-2">{option.label}</span>
-                                                    <span className="text-xs text-slate-400">{option.sub}</span>
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
-                                        {/* CommandSeparator uses shadcn style, let's keep it simple */}
-                                        <div className="h-px bg-slate-100 my-1" />
-                                        <CommandGroup heading="모든 도시">
-                                            {locationOptions.filter(o => o.id !== 'anywhere' && o.type === 'city').map(option => (
-                                                <CommandItem key={option.id} onSelect={() => toggleDeparture(option.id)} className="cursor-pointer h-14 text-base">
-                                                    <div className="w-6 mr-2 flex justify-center">
-                                                        <MapPin className={cn("w-4 h-4", selectedDepartures.includes(option.id) ? "text-blue-600" : "text-slate-300")} />
-                                                    </div>
-                                                    <span className="font-bold text-slate-800">{option.label}</span>
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
+                                        {isLoading && <div className="p-4 text-center text-sm text-slate-400">검색 중...</div>}
+                                        <CommandEmpty>{searchQuery ? "검색 결과가 없습니다." : "도시를 선택하세요."}</CommandEmpty>
+
+                                        {searchQuery && searchResults.length > 0 && (
+                                            <CommandGroup heading="검색 결과">
+                                                {searchResults.map(option => (
+                                                    <CommandItem key={option.id} onSelect={() => toggleDeparture(option.id)} className="cursor-pointer h-14 text-base">
+                                                        <MapPin className={cn("w-4 h-4 mr-2", selectedDepartures.includes(option.id) ? "text-blue-600" : "text-slate-300")} />
+                                                        <div className="flex flex-col">
+                                                            <span className="font-black text-slate-800 leading-none">{option.label}</span>
+                                                            <span className="text-[10px] text-slate-400 mt-1">{option.sub}</span>
+                                                        </div>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        )}
+
+                                        {!searchQuery && (
+                                            <CommandGroup heading="한국 내 주요 공항 (기본)">
+                                                {departures.map(option => (
+                                                    <CommandItem key={option.id} onSelect={() => toggleDeparture(option.id)} className="cursor-pointer h-14 text-base">
+                                                        <MapPin className={cn("w-4 h-4 mr-2", selectedDepartures.includes(option.id) ? "text-blue-600" : "text-slate-300")} />
+                                                        <span className="font-black text-slate-800 mr-2">{option.label}</span>
+                                                        <span className="text-xs text-slate-400">{option.sub}</span>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        )}
                                     </CommandList>
                                 </Command>
                             </PopoverContent>
@@ -621,7 +662,10 @@ export function SearchForm() {
                                         {selectedDestinations.length > 0 ? (
                                             <div className="flex gap-2 overflow-x-auto no-scrollbar items-center">
                                                 {selectedDestinations.map(id => {
-                                                    const item = locationOptions.find(o => o.id === id)
+                                                    const item = departures.find(o => o.id === id) ||
+                                                        destinations.find(o => o.id === id) ||
+                                                        searchResults.find(o => o.id === id) ||
+                                                        (id === 'anywhere' ? { label: '어디든지' } : null)
                                                     return (
                                                         <Badge
                                                             key={id}
@@ -651,26 +695,51 @@ export function SearchForm() {
                                 </button>
                             </PopoverTrigger>
                             <PopoverContent className="p-0 w-screen sm:w-[400px] h-[50vh] sm:h-auto shadow-2xl rounded-t-3xl sm:rounded-3xl overflow-hidden border-slate-100" align="start">
-                                <Command className="h-full">
-                                    <CommandInput placeholder="어디로 떠나시나요? 도시/국가 검색..." className="h-14 text-base border-none ring-0" />
+                                <Command className="h-full" shouldFilter={false}>
+                                    <CommandInput
+                                        placeholder="어디로 떠나시나요? 도시/국가 검색..."
+                                        className="h-14 text-base border-none ring-0"
+                                        value={searchQuery}
+                                        onValueChange={setSearchQuery}
+                                    />
                                     <CommandList className="max-h-none sm:max-h-[350px]">
-                                        <CommandEmpty>검색 결과가 없습니다.</CommandEmpty>
-                                        <CommandGroup heading="추천 옵션">
-                                            <CommandItem onSelect={() => toggleDestination('anywhere')} className="cursor-pointer h-14 text-base bg-blue-50/30">
-                                                <Checkbox checked={selectedDestinations.includes('anywhere')} className="mr-3 h-5 w-5 border-blue-200" />
-                                                <span className="font-black text-blue-700">어디든지 상관없음 📍</span>
-                                            </CommandItem>
-                                        </CommandGroup>
-                                        <div className="h-px bg-slate-100 my-1" />
-                                        <CommandGroup heading="지역별 탐색">
-                                            {locationOptions.filter(o => o.id !== 'anywhere' && o.type === 'group').map(option => (
-                                                <CommandItem key={option.id} onSelect={() => toggleDestination(option.id)} className="cursor-pointer h-14 text-base">
-                                                    <Checkbox checked={selectedDestinations.includes(option.id)} className="mr-3" />
-                                                    <span className="font-black text-slate-700 mr-2">{option.label}</span>
-                                                    <span className="text-xs text-slate-400">{option.sub}</span>
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
+                                        {isLoading && <div className="p-4 text-center text-sm text-slate-400">검색 중...</div>}
+                                        <CommandEmpty>{searchQuery ? "검색 결과가 없습니다." : "목적지를 선택하세요."}</CommandEmpty>
+
+                                        {!searchQuery && (
+                                            <>
+                                                <CommandGroup heading="추천 옵션">
+                                                    <CommandItem onSelect={() => toggleDestination('anywhere')} className="cursor-pointer h-14 text-base bg-blue-50/30">
+                                                        <Checkbox checked={selectedDestinations.includes('anywhere')} className="mr-3 h-5 w-5 border-blue-200" />
+                                                        <span className="font-black text-blue-700">어디든지 상관없음 📍</span>
+                                                    </CommandItem>
+                                                </CommandGroup>
+                                                <div className="h-px bg-slate-100 my-1" />
+                                                <CommandGroup heading="인기 목적지">
+                                                    {destinations.map(option => (
+                                                        <CommandItem key={option.id} onSelect={() => toggleDestination(option.id)} className="cursor-pointer h-14 text-base">
+                                                            <Checkbox checked={selectedDestinations.includes(option.id)} className="mr-3" />
+                                                            <span className="font-black text-slate-700 mr-2">{option.label}</span>
+                                                            <span className="text-xs text-slate-400">{option.sub}</span>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </>
+                                        )}
+
+                                        {searchQuery && searchResults.length > 0 && (
+                                            <CommandGroup heading="검색 결과">
+                                                {searchResults.map(option => (
+                                                    <CommandItem key={option.id} onSelect={() => toggleDestination(option.id)} className="cursor-pointer h-14 text-base">
+                                                        <Checkbox checked={selectedDestinations.includes(option.id)} className="mr-3" />
+                                                        <div className="flex flex-col">
+                                                            <span className="font-black text-slate-800 leading-none">{option.label}</span>
+                                                            <span className="text-[10px] text-slate-400 mt-1">{option.sub}</span>
+                                                        </div>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        )}
                                     </CommandList>
                                 </Command>
                             </PopoverContent>
