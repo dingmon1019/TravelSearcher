@@ -17,7 +17,7 @@ export function SortHeader({ currentSort, onSortChange }: SortHeaderProps) {
     ];
 
     return (
-        <div className="flex items-center gap-2 mb-6 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm w-fit">
+        <div className="flex items-center gap-2 mb-6 bg-card p-1.5 rounded-2xl border border-border shadow-sm w-fit">
             {sortOptions.map((option) => (
                 <Button
                     key={option.id}
@@ -26,8 +26,8 @@ export function SortHeader({ currentSort, onSortChange }: SortHeaderProps) {
                     className={cn(
                         "h-9 px-4 rounded-xl font-bold transition-all flex items-center gap-2",
                         currentSort === option.id
-                            ? "bg-slate-900 text-white hover:bg-slate-800 shadow-md"
-                            : "text-slate-500 hover:bg-slate-50"
+                            ? "bg-foreground text-background hover:bg-foreground/90 shadow-md"
+                            : "text-muted-foreground hover:bg-muted"
                     )}
                     onClick={() => onSortChange(option.id)}
                 >

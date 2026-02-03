@@ -14,8 +14,8 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
         return (
-            <div className="bg-slate-900 border-none rounded-xl shadow-2xl p-2 md:p-4 text-white">
-                <p className="text-[8px] md:text-[10px] font-bold text-slate-400 mb-0.5 md:mb-1 uppercase tracking-widest">
+            <div className="bg-foreground border-none rounded-xl shadow-2xl p-2 md:p-4 text-background">
+                <p className="text-[8px] md:text-[10px] font-bold opacity-70 mb-0.5 md:mb-1 uppercase tracking-widest">
                     {payload[0].payload.date}
                 </p>
                 <p className="text-sm md:text-xl font-black tracking-tighter">
@@ -27,13 +27,18 @@ const CustomTooltip = ({ active, payload }: any) => {
     return null
 }
 
-export function PriceGraph() {
+interface PriceGraphProps {
+    currentPrice?: number;
+    currentDate?: string;
+}
+
+export function PriceGraph({ currentPrice, currentDate }: PriceGraphProps) {
     const isDesktop = useMediaQuery("(min-width: 768px)")
     const searchParams = useSearchParams()
     const [data, setData] = useState<DayPriceTrend[]>([])
     const [startIndex, setStartIndex] = useState(0)
     const [loading, setLoading] = useState(true)
-    const pageSize = 14
+    const pageSize = isDesktop ? 14 : 7 // 모바일에서는 7일치만 노출
 
     useEffect(() => {
         const fetchTrends = async () => {
@@ -44,10 +49,35 @@ export function PriceGraph() {
                 const res = await fetch(`/api/flights/trends?from=${from}&to=${to}`)
                 const json = await res.json()
                 if (json.success) {
-                    setData(json.data)
-                    // Find today's index or start from middle
-                    const defaultIdx = Math.max(0, Math.floor(json.data.length / 2) - pageSize / 2)
-                    setStartIndex(Math.min(json.data.length - pageSize, defaultIdx))
+                    let trendData: DayPriceTrend[] = json.data
+
+                    // [추가] 현재 검색된 최저가 데이터를 그래프 데이터에 강제 반영 (일관성 확보)
+                    if (currentPrice && currentDate) {
+                        const targetIdx = trendData.findIndex(d => d.date === currentDate)
+                        if (targetIdx !== -1) {
+                            // 이미 데이터가 있으면 더 낮은 가격으로 업데이트
+                            trendData[targetIdx].price = Math.min(trendData[targetIdx].price, currentPrice)
+                        } else {
+                            // 데이터가 없으면 새로 추가하고 정렬
+                            trendData.push({
+                                date: currentDate,
+                                price: currentPrice,
+                                isWeekend: [0, 6].includes(new Date(currentDate).getDay())
+                            })
+                            trendData.sort((a, b) => a.date.localeCompare(b.date))
+                        }
+                    }
+
+                    setData(trendData)
+                    
+                    // Find today's index or searched date's index
+                    const focusDate = currentDate || new Date().toISOString().split('T')[0]
+                    const focusIdx = trendData.findIndex(d => d.date >= focusDate)
+                    const defaultIdx = focusIdx !== -1 
+                        ? Math.max(0, focusIdx - Math.floor(pageSize / 2))
+                        : Math.max(0, Math.floor(trendData.length / 2) - pageSize / 2)
+                    
+                    setStartIndex(Math.min(Math.max(0, trendData.length - pageSize), defaultIdx))
                 }
             } catch (error) {
                 console.error("Failed to fetch trends:", error)
@@ -56,14 +86,14 @@ export function PriceGraph() {
             }
         }
         fetchTrends()
-    }, [searchParams])
+    }, [searchParams, pageSize, currentPrice, currentDate])
 
     const next = () => {
-        setStartIndex(prev => Math.min(data.length - pageSize, prev + 7))
+        setStartIndex(prev => Math.min(data.length - pageSize, prev + (isDesktop ? 7 : 3)))
     }
 
     const prev = () => {
-        setStartIndex(prev => Math.max(0, prev - 7))
+        setStartIndex(prev => Math.max(0, prev - (isDesktop ? 7 : 3)))
     }
 
     const chartWidthPercent = data.length > 0 ? (data.length / pageSize) * 100 : 100
@@ -77,33 +107,33 @@ export function PriceGraph() {
     const visibleMinPrice = visibleData.length > 0 ? Math.min(...visibleData.map(d => d.price)) : 0
 
     if (loading) return (
-        <Card className="h-[300px] flex items-center justify-center border-none shadow-none bg-slate-50/50">
+        <Card className="h-[300px] flex items-center justify-center border-none shadow-none bg-muted/30">
             <div className="flex flex-col items-center gap-3">
-                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-sm font-bold text-slate-400">최저가 추이 불러오는 중...</p>
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-sm font-bold text-muted-foreground">최저가 추이 불러오는 중...</p>
             </div>
         </Card>
     )
 
     return (
-        <Card className="border-none shadow-sm bg-white rounded-2xl md:rounded-3xl overflow-hidden mb-6 md:mb-8">
+        <Card className="border-none shadow-sm bg-card rounded-2xl md:rounded-3xl overflow-hidden mb-6 md:mb-8">
             <CardHeader className="flex flex-row items-center gap-4 md:gap-6 pb-2 px-4 md:px-6 pt-4 md:pt-6">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                        <TrendingDown className="h-5 w-5 text-blue-600" />
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                        <TrendingDown className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <CardTitle className="text-lg font-black text-slate-900 tracking-tight">최저가 추이</CardTitle>
-                        <p className="text-xs font-bold text-slate-400">14일 단위 가격 변동 리포트</p>
+                        <CardTitle className="text-lg font-black text-foreground tracking-tight">최저가 추이</CardTitle>
+                        <p className="text-xs font-bold text-muted-foreground">{pageSize}일 단위 가격 변동 리포트</p>
                     </div>
                 </div>
-                <div className="flex gap-1.5 p-1 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex gap-1.5 p-1 bg-muted/50 rounded-xl border border-border">
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={prev}
                         disabled={startIndex <= 0}
-                        className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all border border-slate-300 disabled:opacity-30 bg-white/50"
+                        className="h-8 w-8 rounded-lg hover:bg-card hover:shadow-sm transition-all border border-border disabled:opacity-30 bg-card/50"
                     >
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
@@ -112,7 +142,7 @@ export function PriceGraph() {
                         size="icon"
                         onClick={next}
                         disabled={startIndex + pageSize >= data.length}
-                        className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all border border-slate-300 disabled:opacity-30 bg-white/50"
+                        className="h-8 w-8 rounded-lg hover:bg-card hover:shadow-sm transition-all border border-border disabled:opacity-30 bg-card/50"
                     >
                         <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -120,13 +150,13 @@ export function PriceGraph() {
             </CardHeader>
             <CardContent className="h-[180px] md:h-[220px] p-0 relative overflow-hidden flex">
                 {/* Fixed Y-Axis */}
-                <div className="w-[55px] h-full z-20 bg-white border-r border-slate-50">
+                <div className="w-[45px] md:w-[55px] h-full z-20 bg-card border-r border-border">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={[]} margin={{ top: 20, right: 0, left: 10, bottom: 45 }}>
+                        <BarChart data={[]} margin={{ top: 20, right: 0, left: 5, bottom: 45 }}>
                             <YAxis
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: isDesktop ? 12 : 10, fontWeight: 700, fill: '#94a3b8' }}
+                                tick={{ fontSize: isDesktop ? 12 : 9, fontWeight: 700, fill: 'currentColor', opacity: 0.5 }}
                                 tickFormatter={(val) => `${Math.floor(val / 10000)}`}
                                 domain={[0, maxPrice * 1.2]}
                             />
@@ -148,12 +178,12 @@ export function PriceGraph() {
                                 margin={{ top: 20, right: 20, left: 10, bottom: 5 }}
                                 barGap={8}
                             >
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.1} />
                                 <XAxis
                                     dataKey="date"
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fontSize: isDesktop ? 13 : 10, fontWeight: 700, fill: '#64748b' }}
+                                    tick={{ fontSize: isDesktop ? 13 : 9, fontWeight: 700, fill: 'currentColor', opacity: 0.7 }}
                                     tickFormatter={(val) => {
                                         const parts = val.split('-');
                                         if (!isDesktop) return `${parts[1]}/${parts[2]}`; // 모바일에서는 요일 생략
@@ -162,14 +192,14 @@ export function PriceGraph() {
                                         return `${parts[1]}/${parts[2]}(${dayStr})`;
                                     }}
                                     dy={5}
-                                    interval={isDesktop ? 0 : "preserveStartEnd"}
+                                    interval={0}
                                 />
                                 <Tooltip
                                     content={<CustomTooltip />}
-                                    cursor={{ fill: '#f8fafc', radius: 8 }}
+                                    cursor={{ fill: 'currentColor', opacity: 0.05, radius: 8 }}
                                     allowEscapeViewBox={{ x: true, y: true }}
                                 />
-                                <Bar dataKey="price" radius={[6, 6, 0, 0]} barSize={24}>
+                                <Bar dataKey="price" radius={[6, 6, 0, 0]} barSize={isDesktop ? 24 : 16}>
                                     {data.map((entry, index) => {
                                         const date = new Date(entry.date);
                                         const isSunday = date.getDay() === 0;
@@ -180,16 +210,26 @@ export function PriceGraph() {
                                         // 보이는 영역 내의 최저가인지 확인
                                         const isLowest = isInVisibleRange && entry.price === visibleMinPrice;
 
-                                        let fillColor = "#e2e8f0";
-                                        if (isLowest) fillColor = "#3b82f6";
-                                        else if (isSunday) fillColor = "#fecaca";
-                                        else if (isSaturday) fillColor = "#bfdbfe";
+                                        let fillColor = "currentColor";
+                                        let fillOpacity = 0.1;
+                                        
+                                        if (isLowest) {
+                                            fillColor = "#3b82f6"; // Primary blue
+                                            fillOpacity = 1;
+                                        } else if (isSunday) {
+                                            fillColor = "#ef4444"; // Red
+                                            fillOpacity = 0.2;
+                                        } else if (isSaturday) {
+                                            fillColor = "#3b82f6"; // Blue
+                                            fillOpacity = 0.2;
+                                        }
 
                                         return (
                                             <Cell
                                                 key={`cell-${index}`}
                                                 fill={fillColor}
-                                                className="hover:fill-blue-500 transition-all duration-300 cursor-pointer"
+                                                fillOpacity={fillOpacity}
+                                                className="hover:fill-primary transition-all duration-300 cursor-pointer"
                                             />
                                         );
                                     })}
@@ -201,5 +241,7 @@ export function PriceGraph() {
                 </div>
             </CardContent>
         </Card>
+    )
+}
     )
 }

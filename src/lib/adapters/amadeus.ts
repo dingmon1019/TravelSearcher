@@ -1,6 +1,7 @@
 import { BaseFlightAdapter } from './base'
 import { SearchParams, FlightOffer } from '@/lib/types/flight'
 import { AmadeusService } from '../services/amadeus-service'
+import { CurrencyService } from '../services/currency'
 
 /**
  * Amadeus API 어댑터
@@ -16,17 +17,13 @@ export class AmadeusAdapter extends BaseFlightAdapter {
     async search(params: SearchParams): Promise<FlightOffer[]> {
         return this.safeExecute(async () => {
             const baseUrl = this.getBaseUrl()
-            console.log(`[Amadeus] Starting search for ${params.from[0]} -> ${params.to[0]} using ${baseUrl}`)
+            const token = await AmadeusService.getAccessToken()
 
-            const fromCode = this.cleanCode(params.from[0])
-            const toCode = this.cleanCode(params.to[0])
-
-            if (!fromCode || !toCode) {
-                console.warn(`[Amadeus] Skipping search due to invalid IATA codes: from=${params.from[0]}, to=${params.to[0]}`)
-                return []
+            if (params.tripType === 'multi' && params.segments && params.segments.length > 0) {
+                return this.searchMultiCity(params, token, baseUrl)
             }
 
-            const token = await AmadeusService.getAccessToken()
+            console.log(`[Amadeus] Starting search for ${params.from[0]} -> ${params.to[0]} using ${baseUrl}`)
             console.log(`[Amadeus] Token acquired. Requesting flight offers for ${fromCode} -> ${toCode}`)
 
             // 파라미터 구성
@@ -69,10 +66,62 @@ export class AmadeusAdapter extends BaseFlightAdapter {
             if (data.data && data.data.length > 0) {
                 console.log(`[Amadeus] Found ${data.data.length} offers. First offer currency: ${data.data[0].price.currency}`)
             }
-            const offers = this.mapToFlightOffers(data, params)
+            const offers = await this.mapToFlightOffers(data, params)
             console.log(`[Amadeus] Successfully mapped ${offers.length} offers`)
             return offers
         }, [], { timeout: 10000, retries: 2 })
+    }
+
+    private async searchMultiCity(params: SearchParams, token: string, baseUrl: string): Promise<FlightOffer[]> {
+        console.log(`[Amadeus] Starting multi-city search with ${params.segments?.length} segments`)
+
+        const originDestinations = params.segments?.map((seg, index) => {
+            const from = this.cleanCode(seg.from[0])
+            const to = this.cleanCode(seg.to[0])
+            if (!from || !to) throw new Error(`Invalid IATA codes in segment ${index + 1}`)
+            
+            return {
+                id: (index + 1).toString(),
+                originLocationCode: from,
+                destinationLocationCode: to,
+                departureDateTimeRange: {
+                    date: seg.date
+                }
+            }
+        }) || []
+
+        const travelers = Array.from({ length: params.adults }, (_, i) => ({
+            id: (i + 1).toString(),
+            travelerType: 'ADULT'
+        }))
+
+        const body = {
+            currencyCode: 'KRW',
+            originDestinations,
+            travelers,
+            sources: ['GDS']
+        }
+
+        const url = `${baseUrl}/shopping/flight-offers`
+        console.log(`[Amadeus] POST Fetching: ${url}`)
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        })
+
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            console.error(`[Amadeus] Multi-city API Error ${response.status}:`, JSON.stringify(errorBody))
+            throw new Error(`Amadeus Multi-city API Error: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return this.mapToFlightOffers(data, params)
     }
 
     private cleanCode(code: string): string | null {
@@ -106,10 +155,11 @@ export class AmadeusAdapter extends BaseFlightAdapter {
     /**
      * Amadeus 응답을 공통 형식으로 변환
      */
-    private mapToFlightOffers(data: { data?: any[]; dictionaries?: any }, params: SearchParams): FlightOffer[] {
+    private async mapToFlightOffers(data: { data?: any[]; dictionaries?: any }, params: SearchParams): Promise<FlightOffer[]> {
         if (!data || !data.data) return []
 
         const dictionary = data.dictionaries || {}
+        const rates = await CurrencyService.getKRWRates();
 
         return data.data.map((offer: any): FlightOffer => {
             const itinerary = offer.itineraries[0]
@@ -123,13 +173,15 @@ export class AmadeusAdapter extends BaseFlightAdapter {
             const rawPrice = offer.price?.total ? parseFloat(offer.price.total) : 0
             const currency = offer.price?.currency || 'EUR' // Amadeus Test는 주로 EUR
 
-            // 대략적인 환율 적용 (실제 서비스에서는 외부 환율 API 연동 필요)
+            // 동적 환율 적용
             let priceValue = rawPrice
-            if (currency === 'EUR') priceValue = rawPrice * 1450 // EUR -> KRW
-            else if (currency === 'USD') priceValue = rawPrice * 1350 // USD -> KRW
+            if (currency !== 'KRW') {
+                const rate = rates[currency] || 1;
+                priceValue = rawPrice * rate;
+            }
 
             if (offer.id === data.data![0].id) {
-                console.log(`[Amadeus] Mapping first offer: ${currency} ${rawPrice} -> ≈${Math.floor(priceValue)} KRW`)
+                console.log(`[Amadeus] Mapping first offer: ${currency} ${rawPrice} -> ≈${Math.floor(priceValue)} KRW (Rate: ${rates[currency] || 'N/A'})`)
             }
 
             const result: FlightOffer = {
@@ -147,27 +199,32 @@ export class AmadeusAdapter extends BaseFlightAdapter {
                 stopCount: itinerary.segments.length - 1,
                 departureDate: firstSegment.departure.at.split('T')[0],
                 provider: 'Amadeus',
-                deepLink: `https://www.amadeus.com` // 실제 구현시 상세 링크 생성 로직 필요
+                deepLink: `https://www.amadeus.com/flight-search-result?id=${offer.id}&origin=${firstSegment.departure.iataCode}&destination=${lastSegment.arrival.iataCode}` 
             }
 
-            // 왕복인 경우
-            if (offer.itineraries.length > 1) {
-                const retItinerary = offer.itineraries[1]
-                const retFirst = retItinerary.segments[0]
-                const retLast = retItinerary.segments[retItinerary.segments.length - 1]
+            // 모든 여정 정보를 legs에 담기 (다구간 지원)
+            if (offer.itineraries && offer.itineraries.length > 0) {
+                result.legs = offer.itineraries.map((itin: any) => {
+                    const first = itin.segments[0]
+                    const last = itin.segments[itin.segments.length - 1]
+                    return {
+                        airline: dictionary.carriers?.[first.carrierCode] || first.carrierCode,
+                        flightNumber: `${first.carrierCode}${first.number}`,
+                        departureTime: first.departure.at.split('T')[1].substring(0, 5),
+                        arrivalTime: last.arrival.at.split('T')[1].substring(0, 5),
+                        origin: dictionary.locations?.[first.departure.iataCode]?.cityCode || first.departure.iataCode,
+                        originCode: first.departure.iataCode,
+                        destination: dictionary.locations?.[last.arrival.iataCode]?.cityCode || last.arrival.iataCode,
+                        destinationCode: last.arrival.iataCode,
+                        duration: this.formatDuration(itin.duration),
+                        stopCount: itin.segments.length - 1,
+                        departureDate: first.departure.at.split('T')[0],
+                    }
+                })
 
-                result.returnInfo = {
-                    airline: dictionary.carriers?.[retFirst.carrierCode] || retFirst.carrierCode,
-                    flightNumber: `${retFirst.carrierCode}${retFirst.number}`,
-                    departureTime: retFirst.departure.at.split('T')[1].substring(0, 5),
-                    arrivalTime: retLast.arrival.at.split('T')[1].substring(0, 5),
-                    origin: result.destination,
-                    originCode: result.destinationCode,
-                    destination: result.origin,
-                    destinationCode: result.originCode,
-                    duration: this.formatDuration(retItinerary.duration),
-                    stopCount: retItinerary.segments.length - 1,
-                    departureDate: retFirst.departure.at.split('T')[0],
+                // 왕복인 경우 backward compatibility 유지
+                if (result.legs.length > 1) {
+                    result.returnInfo = result.legs[1]
                 }
             }
 

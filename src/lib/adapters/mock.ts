@@ -51,6 +51,11 @@ export class MockFlightAdapter extends BaseFlightAdapter {
                 departureDate: params.depDate || '',
                 provider: 'Mock',
                 deepLink: `https://example.com/flight/${i}`,
+                aircraft: 'Boeing 787-9 Dreamliner',
+                baggage: '위탁수하물 1개(23kg)',
+                layovers: stopCount > 0 ? [
+                    { airport: 'TPE', duration: '2h 15m' }
+                ] : undefined
             }
 
             // 왕복인 경우
@@ -67,6 +72,11 @@ export class MockFlightAdapter extends BaseFlightAdapter {
                     duration: getDuration(stopCount),
                     stopCount,
                     departureDate: params.retDate,
+                    aircraft: 'Boeing 787-9 Dreamliner',
+                    baggage: '위탁수하물 1개(23kg)',
+                    layovers: stopCount > 0 ? [
+                        { airport: 'TPE', duration: '1h 45m' }
+                    ] : undefined
                 }
             }
 

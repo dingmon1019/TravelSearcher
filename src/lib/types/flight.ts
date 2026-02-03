@@ -10,6 +10,26 @@ export interface LocationOption {
 
 export type ProviderType = 'Trip.com' | 'Naver' | 'Skyscanner' | 'Mock' | 'Amadeus';
 
+export interface FlightLeg {
+    airline: string;
+    flightNumber: string;
+    departureTime: string;
+    arrivalTime: string;
+    origin: string;
+    originCode: string;
+    destination: string;
+    destinationCode: string;
+    duration: string;
+    departureDate: string;
+    stopCount: number;
+    aircraft?: string;
+    baggage?: string;
+    layovers?: Array<{
+        airport: string;
+        duration: string;
+    }>;
+}
+
 export interface FlightOffer {
     id: string;
     airline: string;
@@ -26,30 +46,38 @@ export interface FlightOffer {
     stopCount: number; // 0 for direct, 1+ for stops
     provider: ProviderType;
     deepLink: string;
-    // Round trip support
-    returnInfo?: {
-        airline: string;
-        flightNumber: string;
-        departureTime: string;
-        arrivalTime: string;
-        origin: string;
-        originCode: string;
-        destination: string;
-        destinationCode: string;
+    // Extended info for Details View
+    aircraft?: string;
+    baggage?: string;
+    layovers?: Array<{
+        airport: string;
         duration: string;
-        departureDate: string; // Added for return leg
-        stopCount: number;
-    };
+    }>;
+    // Support for multiple segments (Multi-city)
+    legs?: FlightLeg[];
+    // Round trip support
+    returnInfo?: FlightLeg;
+}
+
+export interface FlightSegment {
+    from: string[];
+    to: string[];
+    date: string;
 }
 
 export interface SearchParams {
     from: string[];
     to: string[];
-    tripType?: 'oneway' | 'round';
+    tripType?: 'oneway' | 'round' | 'multi';
     depDate?: string;
     retDate?: string;
+    segments?: FlightSegment[];
     adults: number;
     sort?: 'price' | 'duration' | 'departure';
+    // Filters
+    maxPrice?: number;
+    stops?: number[];
+    airlines?: string[];
 }
 
 export interface DayPriceTrend {

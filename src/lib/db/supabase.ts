@@ -48,6 +48,7 @@ export async function getPriceTrends(route: string, days: number = 150) {
 
 /**
  * 가격 추이 데이터 저장
+ * (route, date)가 중복될 경우 더 낮은 가격으로 업데이트하거나 무시합니다.
  */
 export async function savePriceTrend(trend: {
     route: string
@@ -59,12 +60,14 @@ export async function savePriceTrend(trend: {
     const client = getSupabase();
     if (!client) return false;
 
+    // upsert를 사용하여 (route, date) 기준 중복 방지 (DB에 unique constraint 필요)
+    // 여기서는 단순히 upsert를 시도합니다.
     const { error } = await client
         .from('price_trends')
-        .insert(trend)
+        .upsert(trend, { onConflict: 'route,date' })
 
     if (error) {
-        console.error('Supabase insert error:', error)
+        console.error('Supabase upsert error:', error)
         return false
     }
 

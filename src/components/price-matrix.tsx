@@ -41,16 +41,16 @@ export function PriceMatrix() {
                         <div
                             key={idx}
                             className={cn(
-                                "flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all hover:bg-zinc-100 hover:scale-105",
+                                "flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all hover:bg-accent hover:scale-105",
                                 item.isCheapest
-                                    ? "bg-blue-50 border-blue-200 text-blue-700 shadow-sm shadow-blue-100"
-                                    : "bg-white border-slate-100 text-slate-600 shadow-sm"
+                                    ? "bg-primary/10 border-primary/20 text-primary shadow-sm shadow-primary/10"
+                                    : "bg-card border-border text-muted-foreground shadow-sm"
                             )}
                         >
                             <span className="text-sm font-bold mb-1">{item.date} ({item.day})</span>
                             <span className={cn(
                                 "text-base font-black",
-                                item.isCheapest ? "text-blue-600" : "text-slate-900"
+                                item.isCheapest ? "text-primary" : "text-foreground"
                             )}>
                                 {Math.round(item.price / 10000)}만
                             </span>

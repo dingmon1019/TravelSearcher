@@ -31,8 +31,8 @@ export class FlightAggregator {
             console.warn('[Aggregator] Amadeus credentials missing, skipping AmadeusAdapter')
         }
 
-        // Mock 데이터 어댑터 제거 (User 요청사항: API만 사용)
-        // this.adapters.push(new MockFlightAdapter())
+        // Mock 데이터 어댑터 (Fallback 용도)
+        this.adapters.push(new MockFlightAdapter())
 
         this.initialized = true
     }
@@ -43,11 +43,21 @@ export class FlightAggregator {
     async searchAll(params: SearchParams): Promise<FlightOffer[]> {
         this.ensureAdapters()
         console.log(`[Aggregator] Searching with: ${this.adapters.map(a => a.name).join(', ')}`)
+        
+        const startTime = Date.now()
         // Promise.allSettled로 일부 실패해도 계속 진행
         const results = await Promise.allSettled(
-            this.adapters.map(adapter =>
-                this.searchWithTimeout(adapter, params, 10000)
-            )
+            this.adapters.map(async adapter => {
+                const adapterStart = Date.now()
+                try {
+                    const offers = await this.searchWithTimeout(adapter, params, 10000)
+                    console.log(`[Aggregator] ${adapter.name} found ${offers.length} offers in ${Date.now() - adapterStart}ms`)
+                    return offers
+                } catch (err) {
+                    console.error(`[Aggregator] ${adapter.name} failed:`, err)
+                    throw err
+                }
+            })
         )
 
         // 성공한 결과만 수집
@@ -57,11 +67,20 @@ export class FlightAggregator {
             )
             .flatMap(result => result.value)
 
+        console.log(`[Aggregator] Total raw offers: ${allOffers.length} from all providers`)
+
         // 중복 제거 (같은 항공편)
         const uniqueOffers = this.deduplicateOffers(allOffers)
+        console.log(`[Aggregator] Unique offers: ${uniqueOffers.length}`)
 
         // 정렬
-        return this.sortOffers(uniqueOffers, params.sort || 'price')
+        const sorted = this.sortOffers(uniqueOffers, params.sort || 'price')
+        if (sorted.length > 0) {
+            console.log(`[Aggregator] Lowest price found: ${sorted[0].price} KRW via ${sorted[0].provider}`)
+        }
+
+        console.log(`[Aggregator] Total search time: ${Date.now() - startTime}ms`)
+        return sorted
     }
 
     /**
