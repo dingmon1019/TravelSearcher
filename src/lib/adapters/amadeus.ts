@@ -68,18 +68,29 @@ export class AmadeusAdapter extends BaseFlightAdapter {
         }, [], { timeout: 10000, retries: 2 })
     }
 
-    /**
-     * UI 전용 ID(city-icn, region-jp 등)에서 IATA 코드를 추출
-     */
     private cleanCode(code: string): string | null {
         if (!code) return null
 
-        // city-icn -> ICN, icn -> ICN, NRT -> NRT
-        const part = code.split('-').pop()?.toUpperCase() || ''
+        // region-jp, island-jeju 등 지역/그룹은 Amadeus IATA 검색에서 제외
+        if (code.startsWith('region-') || code.startsWith('island-')) {
+            return null
+        }
 
-        // IATA 코드는 3글자여야 함 (도시/공항)
-        if (part.length === 3) {
-            return part
+        // city-icn -> ICN, icn -> ICN
+        let part = code
+        if (code.includes('-')) {
+            const parts = code.split('-')
+            // prefix가 city인 경우에만 마지막 파트를 IATA로 간주
+            if (parts[0] === 'city') {
+                part = parts.pop() || ''
+            } else {
+                return null // 그 외 하이픈 포함된 코드는 무시
+            }
+        }
+
+        const cleanPart = part.toUpperCase()
+        if (cleanPart.length === 3) {
+            return cleanPart
         }
 
         return null
@@ -101,8 +112,18 @@ export class AmadeusAdapter extends BaseFlightAdapter {
             const airlineCode = firstSegment.carrierCode
             const airlineName = dictionary.carriers?.[airlineCode] || airlineCode
 
-            // 안전한 가격 파싱
-            const priceValue = offer.price?.total ? parseFloat(offer.price.total) : 0
+            // 안전한 가격 파싱 및 통화 변환
+            const rawPrice = offer.price?.total ? parseFloat(offer.price.total) : 0
+            const currency = offer.price?.currency || 'EUR' // Amadeus Test는 주로 EUR
+
+            // 대략적인 환율 적용 (실제 서비스에서는 외부 환율 API 연동 필요)
+            let priceValue = rawPrice
+            if (currency === 'EUR') priceValue = rawPrice * 1450 // EUR -> KRW
+            else if (currency === 'USD') priceValue = rawPrice * 1350 // USD -> KRW
+
+            if (offer.id === data.data![0].id) {
+                console.log(`[Amadeus] Mapping first offer: ${currency} ${rawPrice} -> ≈${Math.floor(priceValue)} KRW`)
+            }
 
             const result: FlightOffer = {
                 id: `amadeus-${offer.id}`,
@@ -115,7 +136,7 @@ export class AmadeusAdapter extends BaseFlightAdapter {
                 destination: dictionary.locations?.[lastSegment.arrival.iataCode]?.cityCode || lastSegment.arrival.iataCode,
                 destinationCode: lastSegment.arrival.iataCode,
                 duration: this.formatDuration(itinerary.duration),
-                price: Math.floor(priceValue), // KRW 기준
+                price: Math.floor(priceValue), // KRW 기준 변환값
                 stopCount: itinerary.segments.length - 1,
                 departureDate: firstSegment.departure.at.split('T')[0],
                 provider: 'Amadeus',

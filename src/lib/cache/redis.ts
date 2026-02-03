@@ -33,9 +33,8 @@ export async function getCached<T>(key: string): Promise<T | null> {
     if (!client) return null;
 
     try {
-        const data = await client.get<string>(key)
-        if (!data) return null
-        return JSON.parse(data) as T
+        const data = await client.get<T>(key)
+        return data
     } catch (error) {
         console.error('Redis get error:', error)
         return null
@@ -54,7 +53,7 @@ export async function setCache(
     if (!client) return;
 
     try {
-        await client.setex(key, ttlSeconds, JSON.stringify(value))
+        await client.set(key, value, { ex: ttlSeconds })
     } catch (error) {
         console.error('Redis set error:', error)
     }
