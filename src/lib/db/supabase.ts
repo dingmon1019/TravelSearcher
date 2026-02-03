@@ -1,16 +1,37 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+let supabaseInstance: any = null;
 
-// Supabase 클라이언트 생성
-export const supabase = createClient(supabaseUrl, supabaseKey)
+/**
+ * Supabase 클라이언트를 지연 초기화(Lazy Initialization)하여 빌드 시 환경 변수 누락으로 인한 에러를 방지합니다.
+ */
+export function getSupabase() {
+    if (supabaseInstance) return supabaseInstance;
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+        if (process.env.NODE_ENV === 'production') {
+            console.error('[Supabase] Missing environment variables');
+        } else {
+            console.warn('[Supabase] Missing environment variables, using mock behavior');
+        }
+        return null;
+    }
+
+    supabaseInstance = createClient(supabaseUrl, supabaseKey);
+    return supabaseInstance;
+}
 
 /**
  * 가격 추이 데이터 조회
  */
 export async function getPriceTrends(route: string, days: number = 150) {
-    const { data, error } = await supabase
+    const client = getSupabase();
+    if (!client) return [];
+
+    const { data, error } = await client
         .from('price_trends')
         .select('*')
         .eq('route', route)
@@ -35,7 +56,10 @@ export async function savePriceTrend(trend: {
     provider?: string
     is_weekend?: boolean
 }) {
-    const { error } = await supabase
+    const client = getSupabase();
+    if (!client) return false;
+
+    const { error } = await client
         .from('price_trends')
         .insert(trend)
 
@@ -51,7 +75,10 @@ export async function savePriceTrend(trend: {
  * 검색 캐시 저장 (DB 레벨)
  */
 export async function saveSearchCache(cacheKey: string, results: any, expiresAt: Date) {
-    const { error } = await supabase
+    const client = getSupabase();
+    if (!client) return false;
+
+    const { error } = await client
         .from('search_cache')
         .upsert({
             cache_key: cacheKey,
@@ -71,7 +98,10 @@ export async function saveSearchCache(cacheKey: string, results: any, expiresAt:
  * 검색 캐시 조회 (DB 레벨)
  */
 export async function getSearchCache(cacheKey: string) {
-    const { data, error } = await supabase
+    const client = getSupabase();
+    if (!client) return null;
+
+    const { data, error } = await client
         .from('search_cache')
         .select('*')
         .eq('cache_key', cacheKey)
