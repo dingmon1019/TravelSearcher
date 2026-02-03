@@ -194,7 +194,7 @@ function SearchResults() {
 
                     <div className="flex flex-col sm:flex-row items-baseline justify-between gap-4">
                         <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                            {loading ? "항공권을 찾는 중..." : `총 ${results.length}개의 결과`}
+                            {loading ? "항공권을 찾는 중..." : results.length > 0 ? `총 ${results.length}개의 결과` : "검색 결과가 없습니다"}
                         </h2>
                         {isDesktop && <SortHeader currentSort={sort} onSortChange={setSort} />}
                     </div>
@@ -217,7 +217,7 @@ function SearchResults() {
                                 </Card>
                             ))}
                         </div>
-                    ) : (
+                    ) : results.length > 0 ? (
                         <div className="space-y-6">
                             <div className="space-y-3 md:space-y-4">
                                 {paginatedResults.map((flight, idx) => (
@@ -229,51 +229,63 @@ function SearchResults() {
                                     />
                                 ))}
                             </div>
-
-                            {/* Pagination Controls */}
-                            {totalPages > 1 && (
-                                <div className="flex items-center justify-center gap-2 pt-6">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={currentPage === 1}
-                                        onClick={() => setCurrentPage(prev => prev - 1)}
-                                        className="rounded-xl font-bold"
-                                    >
-                                        이전
-                                    </Button>
-                                    <div className="flex items-center gap-1">
-                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                            // TODO: 5페이지 이상일 때 슬라이딩 윈도우 구현 가능
-                                            const pageNum = i + 1;
-                                            return (
-                                                <Button
-                                                    key={pageNum}
-                                                    variant={currentPage === pageNum ? "default" : "ghost"}
-                                                    size="sm"
-                                                    onClick={() => setCurrentPage(pageNum)}
-                                                    className={cn(
-                                                        "w-10 h-10 rounded-xl font-bold",
-                                                        currentPage === pageNum ? "bg-blue-600 hover:bg-blue-700" : ""
-                                                    )}
-                                                >
-                                                    {pageNum}
-                                                </Button>
-                                            )
-                                        })}
-                                        {totalPages > 5 && <span className="text-slate-400 mx-1">...</span>}
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => setCurrentPage(prev => prev + 1)}
-                                        className="rounded-xl font-bold"
-                                    >
-                                        다음
-                                    </Button>
+                        </div>
+                    ) : (
+                        <Card className="border-dashed border-2 border-slate-200 shadow-none bg-slate-50/50">
+                            <CardContent className="py-20 flex flex-col items-center justify-center text-center">
+                                <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+                                    <Filter className="w-8 h-8 text-slate-300" />
                                 </div>
-                            )}
+                                <h3 className="text-xl font-bold text-slate-900 mb-2">검색 결과가 없습니다</h3>
+                                <p className="text-slate-500 font-medium max-w-sm">
+                                    실시간 항공권 조회에 실패했거나 해당 조건의 항공권이 현재 존재하지 않습니다. 검색 조건을 변경하여 다시 시도해 보세요.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 pt-6">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(prev => prev - 1)}
+                                className="rounded-xl font-bold"
+                            >
+                                이전
+                            </Button>
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    // TODO: 5페이지 이상일 때 슬라이딩 윈도우 구현 가능
+                                    const pageNum = i + 1;
+                                    return (
+                                        <Button
+                                            key={pageNum}
+                                            variant={currentPage === pageNum ? "default" : "ghost"}
+                                            size="sm"
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={cn(
+                                                "w-10 h-10 rounded-xl font-bold",
+                                                currentPage === pageNum ? "bg-blue-600 hover:bg-blue-700" : ""
+                                            )}
+                                        >
+                                            {pageNum}
+                                        </Button>
+                                    )
+                                })}
+                                {totalPages > 5 && <span className="text-slate-400 mx-1">...</span>}
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(prev => prev + 1)}
+                                className="rounded-xl font-bold"
+                            >
+                                다음
+                            </Button>
                         </div>
                     )}
                 </div>

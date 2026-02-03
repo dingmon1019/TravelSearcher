@@ -40,21 +40,14 @@ export async function GET(request: NextRequest) {
             const day = date.getDay()
             const isWeekend = day === 0 || day === 6
 
-            // DB에 실제 데이터가 있으면 그것을 사용, 없으면 Mock 생성
-            let price: number
+            // DB에 실제 데이터가 있는 경우만 추가 (Mock 생성 제거)
             if (dbMap.has(dateStr)) {
-                price = dbMap.get(dateStr)!
-            } else {
-                const basePrice = 180000
-                const fluctuation = Math.sin(i / 10) * 50000 + (Math.random() * 30000)
-                price = Math.floor((basePrice + fluctuation + (isWeekend ? 40000 : 0)) / 100) * 100
+                trends.push({
+                    date: dateStr,
+                    price: dbMap.get(dateStr)!,
+                    isWeekend
+                })
             }
-
-            trends.push({
-                date: dateStr,
-                price,
-                isWeekend
-            })
         }
 
         // 캐시 저장 (1시간)

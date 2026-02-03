@@ -31,8 +31,9 @@ export class FlightAggregator {
             console.warn('[Aggregator] Amadeus credentials missing, skipping AmadeusAdapter')
         }
 
-        // 항상 Mock은 포함
-        this.adapters.push(new MockFlightAdapter())
+        // Mock 데이터 어댑터 제거 (User 요청사항: API만 사용)
+        // this.adapters.push(new MockFlightAdapter())
+
         this.initialized = true
     }
 

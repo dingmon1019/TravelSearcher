@@ -41,43 +41,53 @@ function FlightLeg({
         ? `${date.getMonth() + 1}월 ${date.getDate()}일 (${dayNames[date.getDay()]})`
         : '일정 확인 필요';
 
+    // 소요 시간 한글화 (2h 30m -> 2시간 30분)
+    const formattedDuration = duration
+        .replace('h', '시간')
+        .replace('m', '분')
+        .replace(/\s+/g, ' ');
+
     return (
-        <div className="flex-1 w-full flex items-center gap-6 sm:gap-8">
-            <div className="flex flex-col text-center min-w-[60px] md:min-w-[70px]">
-                <span className="font-black text-lg md:text-2xl text-slate-900 tracking-tighter md:tracking-tight">{departureTime}</span>
-                <span className="text-[10px] md:text-xs font-bold text-slate-400">{originCode}</span>
+        <div className="flex-1 w-full flex items-center gap-6 sm:gap-10">
+            {/* 출발 시간 */}
+            <div className="flex flex-col text-center min-w-[70px] md:min-w-[90px]">
+                <span className="font-black text-2xl md:text-3xl text-slate-900 tracking-tight">{departureTime}</span>
+                <span className="text-xs md:text-sm font-bold text-slate-400 mt-0.5">{originCode}</span>
             </div>
 
-            <div className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-xs font-bold text-slate-600">{duration}</span>
+            {/* 비행 경로 및 소요 시간 */}
+            <div className="flex-1 flex flex-col items-center gap-1.5">
+                <span className="text-[11px] md:text-sm font-bold text-slate-700">{formattedDuration}</span>
                 <div className="w-full flex items-center gap-2">
                     <div className="h-[2px] flex-1 bg-slate-100 rounded-full"></div>
                     <Plane className={cn(
-                        "h-3 w-3 transform rotate-90",
+                        "h-4 w-4 transform rotate-90",
                         isDirect ? "text-slate-200" : stopCount === 1 ? "text-amber-400" : "text-rose-500"
                     )} />
                     <div className="h-[2px] flex-1 bg-slate-100 rounded-full"></div>
                 </div>
                 <span className={cn(
-                    "text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full font-bold whitespace-nowrap",
-                    isDirect ? "text-slate-400 bg-slate-50" : stopCount === 1 ? "text-amber-700 bg-amber-50" : "text-rose-700 bg-rose-50 border border-rose-100"
+                    "text-[10px] md:text-xs px-2 md:px-3 py-0.5 md:py-1 rounded-full font-bold whitespace-nowrap",
+                    isDirect ? "text-slate-500 bg-slate-100" : stopCount === 1 ? "text-amber-700 bg-amber-50" : "text-rose-700 bg-rose-50 border border-rose-100"
                 )}>
                     {isDirect ? "직항" : `경유 ${stopCount}회`}
                 </span>
             </div>
 
-            <div className="flex flex-col text-center min-w-[60px] md:min-w-[70px]">
-                <span className="font-black text-lg md:text-2xl text-slate-900 tracking-tighter md:tracking-tight">{arrivalTime}</span>
-                <span className="text-[10px] md:text-xs font-bold text-slate-400">{destinationCode}</span>
+            {/* 도착 시간 */}
+            <div className="flex flex-col text-center min-w-[70px] md:min-w-[90px]">
+                <span className="font-black text-2xl md:text-3xl text-slate-900 tracking-tight">{arrivalTime}</span>
+                <span className="text-xs md:text-sm font-bold text-slate-400 mt-0.5">{destinationCode}</span>
             </div>
 
-            <div className="hidden md:block w-[1px] h-10 bg-slate-100 mx-1"></div>
+            {/* 상세 정보 (데스크탑) */}
+            <div className="hidden md:block w-[1px] h-12 bg-slate-100 mx-2"></div>
 
-            <div className="hidden md:flex flex-col min-w-[100px]">
-                <span className="text-sm font-bold text-slate-800 tracking-tight">{airline}</span>
-                <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1 rounded-sm">{formattedDate}</span>
-                    <span className="text-[10px] font-medium text-slate-400">{flightNumber}</span>
+            <div className="hidden md:flex flex-col min-w-[120px]">
+                <span className="text-base font-bold text-slate-900 tracking-tight mb-1">{airline}</span>
+                <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md w-fit">{formattedDate}</span>
+                    <span className="text-[11px] font-semibold text-slate-400 ml-1">{flightNumber}</span>
                 </div>
             </div>
         </div>
@@ -173,10 +183,10 @@ export function FlightCard({
                     {/* Price & Action Section */}
                     <div className="bg-slate-50/50 p-4 md:p-5 lg:min-w-[180px] flex lg:flex-col items-center justify-between lg:justify-center gap-3 lg:gap-4 lg:border-l border-slate-100">
                         <div className="lg:text-center text-left">
-                            <span className="block text-xl md:text-2xl font-black text-blue-600 tracking-tighter leading-none">
+                            <span className="block text-2xl md:text-3xl font-black text-blue-600 tracking-tighter leading-none">
                                 {price}원
                             </span>
-                            <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">
                                 {returnInfo ? "왕복 총액" : "편도 총액"}
                             </span>
                             {provider && (
