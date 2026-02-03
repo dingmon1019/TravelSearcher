@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
         startDate.setMonth(startDate.getMonth() - 2)
 
         // DB 데이터 조회
-        const dbTrends = await getPriceTrends(route, 300) // 넉넉하게 조회
-        const dbMap = new Map(dbTrends.map(t => [t.date, t.price]))
+        const dbTrends: any[] = await getPriceTrends(route, 300) // 넉넉하게 조회
+        const dbMap = new Map<string, number>(dbTrends.map(t => [t.date as string, t.price as number]))
 
         for (let i = 0; i < 150; i++) {
             const date = new Date(startDate)

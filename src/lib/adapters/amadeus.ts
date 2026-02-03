@@ -88,7 +88,7 @@ export class AmadeusAdapter extends BaseFlightAdapter {
     /**
      * Amadeus 응답을 공통 형식으로 변환
      */
-    private mapToFlightOffers(data: any, params: SearchParams): FlightOffer[] {
+    private mapToFlightOffers(data: { data?: any[]; dictionaries?: any }, params: SearchParams): FlightOffer[] {
         if (!data || !data.data) return []
 
         const dictionary = data.dictionaries || {}
@@ -101,6 +101,9 @@ export class AmadeusAdapter extends BaseFlightAdapter {
             const airlineCode = firstSegment.carrierCode
             const airlineName = dictionary.carriers?.[airlineCode] || airlineCode
 
+            // 안전한 가격 파싱
+            const priceValue = offer.price?.total ? parseFloat(offer.price.total) : 0
+
             const result: FlightOffer = {
                 id: `amadeus-${offer.id}`,
                 airline: airlineName,
@@ -112,7 +115,7 @@ export class AmadeusAdapter extends BaseFlightAdapter {
                 destination: dictionary.locations?.[lastSegment.arrival.iataCode]?.cityCode || lastSegment.arrival.iataCode,
                 destinationCode: lastSegment.arrival.iataCode,
                 duration: this.formatDuration(itinerary.duration),
-                price: Math.floor(parseFloat(offer.price.total)), // KRW 기준
+                price: Math.floor(priceValue), // KRW 기준
                 stopCount: itinerary.segments.length - 1,
                 departureDate: firstSegment.departure.at.split('T')[0],
                 provider: 'Amadeus',

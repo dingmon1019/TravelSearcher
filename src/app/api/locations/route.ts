@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { LocationService } from '@/lib/services/location-service'
+import { LocationOption } from '@/lib/types/flight'
 
 export async function GET(request: NextRequest) {
     try {
@@ -7,7 +8,7 @@ export async function GET(request: NextRequest) {
         const type = searchParams.get('type') // 'departure', 'destination'
         const query = searchParams.get('q') // 검색어
 
-        let locations = []
+        let locations: LocationOption[] = []
 
         if (query) {
             // 키워드 검색 (Amadeus 연동 예정)
