@@ -17,8 +17,8 @@ export class AmadeusService {
         console.log(`[AmadeusService] Requesting token from ${authUrl}. ClientID present: ${!!clientId}`)
 
         if (!clientId || !clientSecret) {
-            console.error('[AmadeusService] Amadeus API credentials missing in process.env')
-            throw new Error('Amadeus API credentials missing')
+            console.error('[AmadeusService] Amadeus API credentials missing (AMADEUS_CLIENT_ID / AMADEUS_CLIENT_SECRET)');
+            throw new Error('Amadeus API credentials missing');
         }
 
         try {
