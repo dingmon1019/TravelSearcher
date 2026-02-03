@@ -2,6 +2,7 @@ import { SearchParams, FlightOffer } from '@/lib/types/flight'
 import { FlightProviderAdapter } from '@/lib/adapters/base'
 import { MockFlightAdapter } from '@/lib/adapters/mock'
 import { AmadeusAdapter } from '@/lib/adapters/amadeus'
+import { KiwiAdapter } from '@/lib/adapters/kiwi'
 
 /**
  * 항공권 검색 집계 서비스
@@ -27,12 +28,16 @@ export class FlightAggregator {
         if (process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET) {
             console.log('[Aggregator] Adding AmadeusAdapter')
             this.adapters.push(new AmadeusAdapter())
-        } else {
-            console.warn('[Aggregator] Amadeus credentials missing, skipping AmadeusAdapter')
         }
 
-        // Mock 데이터 어댑터 (Fallback 용도)
-        this.adapters.push(new MockFlightAdapter())
+        // Kiwi 어댑터 추가
+        if (process.env.KIWI_API_KEY) {
+            console.log('[Aggregator] Adding KiwiAdapter')
+            this.adapters.push(new KiwiAdapter())
+        }
+
+        // Mock 데이터 어댑터 제거 (실제 티켓 결과만 조회하도록 강제)
+        // this.adapters.push(new MockFlightAdapter())
 
         this.initialized = true
     }
