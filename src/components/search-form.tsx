@@ -773,10 +773,11 @@ export function SearchForm() {
                                             locale: ko,
                                             initialFocus: true,
                                             mode: (tripType === "round" ? "range" : "single") as any,
-                                            defaultMonth: specificDate?.from,
+                                            defaultMonth: specificDate?.from || new Date(),
                                             selected: specificDate,
                                             onSelect: setSpecificDate as any,
-                                            numberOfMonths: isDesktop ? 2 : 1
+                                            numberOfMonths: isDesktop ? 2 : 1,
+                                            fromDate: new Date() // 오늘 이전 날짜 선택 불가능하게 변경
                                         }}
                                     />
                                 </PopoverContent>
@@ -800,7 +801,8 @@ export function SearchForm() {
                                                 selected: depRange,
                                                 onSelect: setDepRange as any,
                                                 numberOfMonths: isDesktop ? 2 : 1,
-                                                locale: ko
+                                                locale: ko,
+                                                fromDate: new Date()
                                             }}
                                         />
                                     </PopoverContent>

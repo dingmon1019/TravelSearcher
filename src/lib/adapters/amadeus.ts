@@ -55,6 +55,13 @@ export class AmadeusAdapter extends BaseFlightAdapter {
             if (!response.ok) {
                 const errorBody = await response.json().catch(() => ({}));
                 console.error(`[Amadeus] API Error ${response.status}:`, JSON.stringify(errorBody))
+
+                // 상세 에러 추출
+                const detail = errorBody?.errors?.[0]?.detail || ''
+                if (detail.toLowerCase().includes('departure date') || detail.toLowerCase().includes('ticketing date')) {
+                    throw new Error(`Invalid Date: 과거 날짜나 너무 임박한 날짜는 검색할 수 없습니다. (Detail: ${detail})`)
+                }
+
                 throw new Error(`Amadeus API Error: ${response.status}`)
             }
 
