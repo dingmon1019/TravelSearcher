@@ -7,11 +7,16 @@ import { AmadeusService } from '../services/amadeus-service'
  */
 export class AmadeusAdapter extends BaseFlightAdapter {
     name = 'Amadeus'
-    private baseUrl = 'https://test.api.amadeus.com/v2' // 테스트 환경, 실 운영시 https://api.amadeus.com/v2
+    private getBaseUrl() {
+        return process.env.AMADEUS_ENV === 'production'
+            ? 'https://api.amadeus.com/v2'
+            : 'https://test.api.amadeus.com/v2'
+    }
 
     async search(params: SearchParams): Promise<FlightOffer[]> {
         return this.safeExecute(async () => {
-            console.log(`[Amadeus] Starting search for ${params.from[0]} -> ${params.to[0]}`)
+            const baseUrl = this.getBaseUrl()
+            console.log(`[Amadeus] Starting search for ${params.from[0]} -> ${params.to[0]} using ${baseUrl}`)
 
             const fromCode = this.cleanCode(params.from[0])
             const toCode = this.cleanCode(params.to[0])
@@ -38,7 +43,7 @@ export class AmadeusAdapter extends BaseFlightAdapter {
                 query.append('returnDate', params.retDate)
             }
 
-            const url = `${this.baseUrl}/shopping/flight-offers?${query.toString()}`
+            const url = `${baseUrl}/shopping/flight-offers?${query.toString()}`
             console.log(`[Amadeus] Fetching: ${url}`)
 
             const response = await fetch(url, {
@@ -54,8 +59,11 @@ export class AmadeusAdapter extends BaseFlightAdapter {
             }
 
             const data = await response.json()
+            if (data.data && data.data.length > 0) {
+                console.log(`[Amadeus] Found ${data.data.length} offers. First offer currency: ${data.data[0].price.currency}`)
+            }
             const offers = this.mapToFlightOffers(data, params)
-            console.log(`[Amadeus] Successfully found ${offers.length} offers`)
+            console.log(`[Amadeus] Successfully mapped ${offers.length} offers`)
             return offers
         }, [], { timeout: 10000, retries: 2 })
     }

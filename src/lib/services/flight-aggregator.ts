@@ -45,7 +45,7 @@ export class FlightAggregator {
         // Promise.allSettled로 일부 실패해도 계속 진행
         const results = await Promise.allSettled(
             this.adapters.map(adapter =>
-                this.searchWithTimeout(adapter, params, 5000)
+                this.searchWithTimeout(adapter, params, 10000)
             )
         )
 
