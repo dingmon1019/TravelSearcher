@@ -3,9 +3,10 @@ import { updateSession } from './lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
   // Update session and get current user
-  const { supabaseResponse, user } = await updateSession(request)
+  const { supabaseResponse } = await updateSession(request)
 
-  // Check if the user is trying to access protected routes
+  // Auth requirement removed as per user request
+  /*
   if (request.nextUrl.pathname.startsWith('/search')) {
     if (!user) {
       // Redirect to login if not authenticated
@@ -15,6 +16,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
   }
+  */
 
   return supabaseResponse
 }
