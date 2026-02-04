@@ -243,5 +243,3 @@ export function PriceGraph({ currentPrice, currentDate }: PriceGraphProps) {
         </Card>
     )
 }
-    )
-}

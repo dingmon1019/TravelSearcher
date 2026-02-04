@@ -36,8 +36,8 @@ export class FlightAggregator {
             this.adapters.push(new KiwiAdapter())
         }
 
-        // Mock 데이터 어댑터 제거 (실제 티켓 결과만 조회하도록 강제)
-        // this.adapters.push(new MockFlightAdapter())
+        // Mock 데이터 어댑터 추가 (테스트용)
+        this.adapters.push(new MockFlightAdapter())
 
         this.initialized = true
     }
