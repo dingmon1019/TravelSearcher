@@ -3,9 +3,9 @@
 import { CheckCircle2, Home, ArrowLeft, Calendar, Plane, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 
-export default function BookingPage() {
+function BookingContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [bookingId, setBookingId] = useState("")
@@ -89,5 +89,13 @@ export default function BookingPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function BookingPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <BookingContent />
+        </Suspense>
     )
 }

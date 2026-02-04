@@ -8,7 +8,7 @@ export interface LocationOption {
     keywords?: string[]; // For search enhancement
 }
 
-export type ProviderType = 'Trip.com' | 'Naver' | 'Skyscanner' | 'Mock' | 'Amadeus';
+export type ProviderType = 'Trip.com' | 'Naver' | 'Skyscanner' | 'Mock' | 'Amadeus' | 'Kiwi';
 
 export interface FlightLeg {
     airline: string;

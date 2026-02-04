@@ -19,6 +19,14 @@ export class AmadeusAdapter extends BaseFlightAdapter {
             const baseUrl = this.getBaseUrl()
             const token = await AmadeusService.getAccessToken()
 
+            const fromCode = this.cleanCode(params.from[0])
+            const toCode = this.cleanCode(params.to[0])
+
+            if (!fromCode || !toCode) {
+                console.warn(`[Amadeus] Skipping search due to invalid IATA codes: ${params.from[0]} -> ${params.to[0]}`)
+                return []
+            }
+
             if (params.tripType === 'multi' && params.segments && params.segments.length > 0) {
                 return this.searchMultiCity(params, token, baseUrl)
             }
@@ -223,7 +231,7 @@ export class AmadeusAdapter extends BaseFlightAdapter {
                 })
 
                 // 왕복인 경우 backward compatibility 유지
-                if (result.legs.length > 1) {
+                if (result.legs && result.legs.length > 1) {
                     result.returnInfo = result.legs[1]
                 }
             }
