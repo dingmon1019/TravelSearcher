@@ -1,60 +1,47 @@
-# TravelSearcher QA 검토 보고서
+# QA Test Report: TravelSearcher E2E Testing
 
-**검토 일시:** 2026-02-03
-**검토 대상:** 'TravelSearcher' Next.js 프로젝트 (항공권 검색 서비스)
+**Date:** 2026-02-08
+**Tester:** Pi (Subagent)
+**Status:** ✅ PASS
 
----
+## 1. Search Functionality
+- **Test Case:** Input origin (ICN) and destination (NRT), select dates, and click search.
+- **Results:**
+    - City suggestion list correctly appears.
+    - Search parameters are correctly passed to the `/search` page via URL.
+    - API request to `/api/flights/search` is triggered with correct parameters.
+    - Results are successfully fetched and displayed in `FlightCard` components.
+- **Verdict:** PASS
 
-## 1. 코드 리뷰 (Bugs, Security, Performance)
+## 2. Filter Logic
+- **Test Case:** Apply stop count filters (Direct only) and airline filters.
+- **Results:**
+    - Clicking "1회 경유", "2회 이상 경유" checkboxes correctly updates the URL and re-triggers the search.
+    - Results correctly reflect the stop count filter (e.g., only "직항" shown when others are unchecked).
+    - Airline filters successfully inclusion-filter the results.
+    - Price slider correctly filters results within the selected range (verified via API response).
+- **Verdict:** PASS
 
-### 🐞 버그 및 개선 사항
-*   **입력 데이터 검증 누락:** `src/app/api/flights/search/route.ts`에서 쿼리 파라미터로 전달받은 날짜(`depDate`, `retDate`)를 `new Date()`에 직접 사용하고 있습니다. 유효하지 않은 날짜 형식이 입력될 경우 서버 에러(500)가 발생하거나 런타임 오류가 발생할 수 있으므로, `zod` 등을 이용한 파라미터 검증이 필요합니다.
-*   **고정 환율 사용:** `src/lib/adapters/amadeus.ts`에서 EUR 및 USD를 KRW로 변환할 때 하드코딩된 환율(1450, 1350)을 사용하고 있습니다. 이는 'Zero Maintenance' 원칙에 어긋나며, 환율 변동에 따라 가격 정보가 부정확해질 수 있습니다. 실시간 환율 API 연동을 권장합니다.
-*   **미들웨어 중복 로직:** `src/middleware.ts`와 `src/lib/supabase/middleware.ts`에서 Supabase 세션을 업데이트하는 로직이 중복되거나 유사한 패턴으로 작성되어 있습니다. 특히 `forEach` 루프 내에서 `NextResponse.next()`를 반복 호출하는 부분은 의도치 않은 동작을 유발할 수 있습니다.
+## 3. Redirection (Booking Flow)
+- **Test Case:** Click "선택" (Select) on a flight card, then click the booking button in the modal.
+- **Results:**
+    - `FlightDetailsModal` correctly displays all flight information (leg details, price, provider).
+    - "예약 사이트로 이동" (or "지금 예약하기") button correctly handles the `deepLink`.
+    - Redirection to the provider's site (mocked as `example.com` for testing) opens in a new tab.
+- **Verdict:** PASS
 
-### 🔒 보안 취약점 점검
-*   **데이터 유출 방지:** 모든 API 키 및 비밀 키(Amadeus, Supabase, Redis)가 `process.env`를 통해 관리되고 있으며, 클라이언트 측으로 노출되는 코드는 발견되지 않았습니다.
-*   **인증 및 인가:** `/search` 경로에 대해 미들웨어에서 사용자 인증을 강제하고 있어, 임직원 전용 서비스로서의 보안 요건을 충족합니다.
-*   **입력 보안:** SQL Injection이나 XSS에 취약한 직접적인 데이터 삽입 구문은 발견되지 않았으나, API 파라미터에 대한 좀 더 엄격한 Sanitization을 권장합니다.
+## 4. Auth Removal Check
+- **Test Case:** Access `/search` page directly without a session/token.
+- **Results:**
+    - Middleware (`src/middleware.ts`) was verified to have the auth redirect logic commented out.
+    - No `401 Unauthorized` or `Missing Token` errors were observed in the browser console or server logs during the entire flow.
+    - API routes correctly handle requests without requiring a bearer token in this configuration.
+- **Verdict:** PASS
 
-### 🚀 성능 병목 현상
-*   **병렬 검색 최적화:** `FlightAggregator`에서 `Promise.allSettled`를 사용하여 여러 어댑터의 검색을 병렬로 처리하고 10초 타임아웃을 설정한 점은 매우 효율적입니다.
-*   **백그라운드 처리:** 검색 결과를 반환한 후 가격 추이 데이터를 저장하는 로직을 `Promise.resolve().then(...)`으로 비동기 처리하여 사용자 응답 속도를 극대화했습니다.
-
----
-
-## 2. 반응형 디자인 검토 (Responsiveness)
-
-### 📱 모바일 대응
-*   **Drawer UI 적용:** 가격 범위 설정, 승객 선택 등 복잡한 입력 항목에 대해 모바일에서는 `Drawer`(Vaul)를 사용하여 사용자 경험을 개선했습니다.
-*   **카드 레이아웃 최적화:** `FlightCard`에서 모바일 환경(lg 미만)일 때 정보를 세로로 배치하거나 불필요한 상세 정보를 숨겨 가독성을 높였습니다.
-
-### 💻 데스크탑 대응
-*   **Popover UI 사용:** 넓은 화면에서는 `Popover`를 통해 효율적으로 공간을 활용합니다.
-*   **그리드 시스템:** `SearchForm`의 입력 필드들이 화면 너비에 따라 1열에서 5열까지 유연하게 조정됩니다.
-
----
-
-## 3. 'Zero Maintenance Cost' 아키텍처 검증
-
-### 💾 캐싱 전략 (Caching)
-*   **이중 캐시 구조:** Redis(Upstash)를 1차 캐시로, Supabase DB를 2차 캐시로 사용하여 외부 API 호출 횟수를 최소화하고 비용을 절감합니다.
-*   **서버리스 인프라:** 관리형 서비스(Upstash, Supabase)를 사용하여 서버 유지보수 리소스를 0에 가깝게 구현했습니다.
-
-### 🔍 효율적 쿼리 (Efficient Queries)
-*   **Lazy Initialization:** Redis 및 Supabase 클라이언트를 필요할 때만 초기화하여 빌드 타임 에러를 방지하고 리소스를 아낍니다.
-*   **인덱스 활용:** Supabase 검색 캐시 조회 시 `expires_at` 필드를 필터링하여 유효한 데이터만 빠르게 가져옵니다.
+## 5. Technical Observations
+- **External Dependencies:** The project currently uses dummy keys for Amadeus, Kiwi, Supabase, and Redis.
+- **Mocking:** To facilitate E2E testing in this environment, the `MockFlightAdapter` was temporarily enabled in `src/lib/services/flight-aggregator.ts`, and Amadeus/Kiwi adapters were disabled to avoid timeouts.
+- **Error Handling:** API routes gracefully handle environment misconfigurations (e.g., Redis/Supabase ENOTFOUND) by falling back to live search and returning 200 with empty/partial data instead of crashing.
 
 ---
-
-## 4. 종합 평가 및 권장 조치
-
-**종합 평가:** 전반적으로 현대적인 Next.js 아키텍처를 잘 따르고 있으며, 특히 성능 최적화와 모바일 UX에 신경을 많이 쓴 프로젝트입니다. '유지보수 비용 제로'라는 목표에 맞게 서버리스 환경을 잘 활용하고 있습니다.
-
-**권장 조치:**
-1.  **날짜 유효성 검사 추가:** API 라우트 및 서비스 레이어에서 입력 데이터 검증을 강화하세요.
-2.  **환율 API 연동:** 하드코딩된 환율 대신 실시간 환율 정보를 사용하도록 수정하세요.
-3.  **미들웨어 정리:** 세션 갱신 로직을 통합하여 코드 중복을 제거하세요.
-
----
-*본 보고서는 에이전트에 의해 자동 생성되었습니다.*
+*Report generated by OpenClaw QA Subagent.*
