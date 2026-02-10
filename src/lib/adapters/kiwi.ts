@@ -11,22 +11,40 @@ export class KiwiAdapter extends BaseFlightAdapter {
     async search(params: SearchParams): Promise<FlightOffer[]> {
         return this.safeExecute(async () => {
             const apiKey = process.env.KIWI_API_KEY
-            if (!apiKey) {
-                console.warn('[Kiwi] API Key missing, skipping search')
+            if (!apiKey || apiKey === 'dummy_key') {
+                console.warn('[Kiwi] API Key missing or dummy, skipping search')
+                return []
+            }
+
+            // IATA 코드 정리 (city-icn -> ICN)
+            const fromCode = this.cleanCode(params.from[0])
+            const toCode = this.cleanCode(params.to[0])
+
+            if (!fromCode || !toCode) {
+                console.warn(`[Kiwi] Invalid IATA codes: ${params.from[0]} -> ${params.to[0]}`)
                 return []
             }
 
             // 날짜 형식 변환 (YYYY-MM-DD -> DD/MM/YYYY)
             const formatDate = (dateStr: string) => {
-                const [y, m, d] = dateStr.split('-')
+                if (!dateStr) return ''
+                const parts = dateStr.split('-')
+                if (parts.length !== 3) return dateStr
+                const [y, m, d] = parts
                 return `${d}/${m}/${y}`
             }
 
+            const depDateFormatted = formatDate(params.depDate || '')
+            if (!depDateFormatted) {
+                console.warn('[Kiwi] Departure date missing')
+                return []
+            }
+
             const query = new URLSearchParams({
-                fly_from: params.from[0],
-                fly_to: params.to[0],
-                date_from: formatDate(params.depDate || ''),
-                date_to: formatDate(params.depDate || ''),
+                fly_from: fromCode,
+                fly_to: toCode,
+                date_from: depDateFormatted,
+                date_to: depDateFormatted,
                 adults: params.adults.toString(),
                 curr: 'KRW',
                 limit: '20'
@@ -38,12 +56,18 @@ export class KiwiAdapter extends BaseFlightAdapter {
             }
 
             const url = `${this.baseUrl}/search?${query.toString()}`
+            console.log(`[Kiwi] Fetching with key ${apiKey.substring(0, 5)}... : ${url}`)
             
             const response = await fetch(url, {
-                headers: { 'apikey': apiKey }
+                headers: { 
+                    'apikey': apiKey.trim(),
+                    'accept': 'application/json'
+                }
             })
 
             if (!response.ok) {
+                const errBody = await response.json().catch(() => ({}));
+                console.error(`[Kiwi] API Error ${response.status}:`, JSON.stringify(errBody));
                 throw new Error(`Kiwi API Error: ${response.status}`)
             }
 
@@ -105,5 +129,23 @@ export class KiwiAdapter extends BaseFlightAdapter {
         const h = Math.floor(seconds / 3600)
         const m = Math.floor((seconds % 3600) / 60)
         return `${h}h ${m}m`
+    }
+
+    private cleanCode(code: string): string | null {
+        if (!code) return null
+        if (code.startsWith('region-') || code.startsWith('island-')) return null
+        
+        let part = code
+        if (code.includes('-')) {
+            const parts = code.split('-')
+            if (parts[0] === 'city') {
+                part = parts[parts.length - 1] || ''
+            } else {
+                return null
+            }
+        }
+
+        const cleanPart = part.toUpperCase()
+        return cleanPart.length === 3 ? cleanPart : null
     }
 }

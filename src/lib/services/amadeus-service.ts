@@ -16,8 +16,8 @@ export class AmadeusService {
 
         console.log(`[AmadeusService] Requesting token from ${authUrl}. ClientID present: ${!!clientId}`)
 
-        if (!clientId || !clientSecret) {
-            console.error('[AmadeusService] Amadeus API credentials missing (AMADEUS_CLIENT_ID / AMADEUS_CLIENT_SECRET)');
+        if (!clientId || !clientSecret || clientId === 'dummy_id') {
+            console.warn('[AmadeusService] Amadeus API credentials missing or dummy, skipping token request');
             throw new Error('Amadeus API credentials missing');
         }
 

@@ -40,7 +40,10 @@
 
 ## 5. Technical Observations
 - **External Dependencies:** The project currently uses dummy keys for Amadeus, Kiwi, Supabase, and Redis.
-- **Mocking:** To facilitate E2E testing in this environment, the `MockFlightAdapter` was temporarily enabled in `src/lib/services/flight-aggregator.ts`, and Amadeus/Kiwi adapters were disabled to avoid timeouts.
+- **API Logic Fixes:** 
+    - Amadeus: Switched to EUR requests for Test API stability (with auto-conversion to KRW).
+    - Kiwi: Added IATA code cleaning (city-icn -> ICN) and fixed date formatting bug.
+- **Fallback System:** Implemented a dynamic fallback to `MockFlightAdapter` when real keys are detected as 'dummy'.
 - **Error Handling:** API routes gracefully handle environment misconfigurations (e.g., Redis/Supabase ENOTFOUND) by falling back to live search and returning 200 with empty/partial data instead of crashing.
 
 ---

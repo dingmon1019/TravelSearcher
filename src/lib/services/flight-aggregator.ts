@@ -22,22 +22,27 @@ export class FlightAggregator {
     private ensureAdapters() {
         if (this.initialized) return
 
-        console.log(`[Aggregator] Configuring adapters. Env AMADEUS_CLIENT_ID: ${!!process.env.AMADEUS_CLIENT_ID}`)
+        const hasAmadeus = process.env.AMADEUS_CLIENT_ID && 
+                          process.env.AMADEUS_CLIENT_ID !== 'dummy_id' &&
+                          process.env.AMADEUS_CLIENT_SECRET &&
+                          process.env.AMADEUS_CLIENT_SECRET !== 'dummy_secret';
 
-        // 환경 변수가 있으면 Amadeus 추가
-        if (process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET) {
+        const hasKiwi = process.env.KIWI_API_KEY && 
+                        process.env.KIWI_API_KEY !== 'dummy_key' &&
+                        process.env.KIWI_API_KEY.length > 30;
+
+        console.log(`[Aggregator] Configuring adapters. Amadeus: ${!!hasAmadeus}, Kiwi: ${!!hasKiwi}`)
+
+        // 환경 변수가 유효하면 실제 어댑터 추가
+        if (hasAmadeus) {
             console.log('[Aggregator] Adding AmadeusAdapter')
             this.adapters.push(new AmadeusAdapter())
         }
 
-        // Kiwi 어댑터 추가
-        if (process.env.KIWI_API_KEY) {
+        if (hasKiwi) {
             console.log('[Aggregator] Adding KiwiAdapter')
             this.adapters.push(new KiwiAdapter())
         }
-
-        // Mock 데이터 어댑터 제거 (실제 결과만 조회하도록 강제)
-        // this.adapters.push(new MockFlightAdapter())
 
         this.initialized = true
     }
@@ -110,7 +115,7 @@ export class FlightAggregator {
     private deduplicateOffers(offers: FlightOffer[]): FlightOffer[] {
         const seen = new Set<string>()
         return offers.filter(offer => {
-            const key = `${offer.airline}-${offer.flightNumber}-${offer.departureTime}-${offer.departureDate}`
+            const key = `${offer.airline}-${offer.flightNumber}-${offer.departureTime}-${offer.departureDate}-${offer.price}`
             if (seen.has(key)) return false
             seen.add(key)
             return true

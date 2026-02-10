@@ -35,13 +35,14 @@ export class AmadeusAdapter extends BaseFlightAdapter {
             console.log(`[Amadeus] Token acquired. Requesting flight offers for ${fromCode} -> ${toCode}`)
 
             // 파라미터 구성
+            // Test 환경에서는 KRW 요청이 불안정할 수 있으므로 EUR로 요청 후 변환하는 것이 안전함
             const query = new URLSearchParams({
                 originLocationCode: fromCode,
                 destinationLocationCode: toCode,
                 departureDate: params.depDate || '',
                 adults: params.adults.toString(),
                 max: '20',
-                currencyCode: 'KRW'
+                currencyCode: 'EUR' 
             })
 
             if (params.tripType === 'round' && params.retDate) {
@@ -104,7 +105,7 @@ export class AmadeusAdapter extends BaseFlightAdapter {
         }))
 
         const body = {
-            currencyCode: 'KRW',
+            currencyCode: 'EUR',
             originDestinations,
             travelers,
             sources: ['GDS']
@@ -207,7 +208,7 @@ export class AmadeusAdapter extends BaseFlightAdapter {
                 stopCount: itinerary.segments.length - 1,
                 departureDate: firstSegment.departure.at.split('T')[0],
                 provider: 'Amadeus',
-                deepLink: `https://www.amadeus.com/flight-search-result?id=${offer.id}&origin=${firstSegment.departure.iataCode}&destination=${lastSegment.arrival.iataCode}` 
+                deepLink: offer.id ? `https://www.amadeus.net/sl/flights?origin=${firstSegment.departure.iataCode}&destination=${lastSegment.arrival.iataCode}&departureDate=${firstSegment.departure.at.split('T')[0]}` : '#'
             }
 
             // 모든 여정 정보를 legs에 담기 (다구간 지원)
