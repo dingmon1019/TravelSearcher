@@ -208,7 +208,7 @@ export class AmadeusAdapter extends BaseFlightAdapter {
                 stopCount: itinerary.segments.length - 1,
                 departureDate: firstSegment.departure.at.split('T')[0],
                 provider: 'Amadeus',
-                deepLink: offer.id ? `https://www.amadeus.net/sl/flights?origin=${firstSegment.departure.iataCode}&destination=${lastSegment.arrival.iataCode}&departureDate=${firstSegment.departure.at.split('T')[0]}` : '#'
+                deepLink: offer.id ? `https://www.skyscanner.co.kr/transport/flights/${firstSegment.departure.iataCode.toLowerCase()}/${lastSegment.arrival.iataCode.toLowerCase()}/${firstSegment.departure.at.split('T')[0].replace(/-/g, '').substring(2)}/` : '#'
             }
 
             // 모든 여정 정보를 legs에 담기 (다구간 지원)
