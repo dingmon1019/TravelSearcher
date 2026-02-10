@@ -38,10 +38,11 @@ export class CurrencyService {
         } catch (error) {
             console.error('[CurrencyService] Error fetching rates:', error);
             // API 실패 시 기본값 (Fallback)
+            // 2026년 기준 최신화된 보수적 환율 적용
             return {
-                'EUR': 1450,
-                'USD': 1350,
-                'JPY': 9.0
+                'EUR': 1510,
+                'USD': 1420,
+                'JPY': 9.5
             };
         }
     }

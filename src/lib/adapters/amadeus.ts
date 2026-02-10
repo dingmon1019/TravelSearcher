@@ -182,11 +182,11 @@ export class AmadeusAdapter extends BaseFlightAdapter {
             const rawPrice = offer.price?.total ? parseFloat(offer.price.total) : 0
             const currency = offer.price?.currency || 'EUR' // Amadeus Test는 주로 EUR
 
-            // 동적 환율 적용
+            // 동적 환율 적용 (수수료 대비 1% 할증 적용)
             let priceValue = rawPrice
             if (currency !== 'KRW') {
                 const rate = rates[currency] || 1;
-                priceValue = rawPrice * rate;
+                priceValue = rawPrice * rate * 1.01; // 결제 수수료 및 오차 대비 1% 할증
             }
 
             if (offer.id === data.data![0].id) {
